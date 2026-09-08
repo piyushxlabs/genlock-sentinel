@@ -1,49 +1,39 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 2 COMPLETION CHECKLIST
-# Step 2: Initialize Project Manifest & Install Dependencies
+# STEP 3 COMPLETION CHECKLIST
+# Step 3: Generate Coding Assistant Context File
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify backend dependencies are locked and virtual environment is healthy:
+[ ] Verify coding assistant context file in `backend/CLAUDE.md`:
     ```
-    uv run python -c "import google.adk, google.genai, pydantic, asyncpg, aiosqlite, fastapi; print('Backend dependencies OK')"
+    powershell -Command "Get-Content backend/CLAUDE.md | Select-Object -First 10"
     ```
-    Expected: `Backend dependencies OK`
+    Expected: Header `# Genlock Sentinel — Coding Assistant Context` and Project Overview.
 
-[ ] Verify frontend packages and tools are installed:
+[ ] Verify root `CLAUDE.md` context file:
     ```
-    cd frontend && pnpm exec vite --version && cd ..
+    powershell -Command "Get-Item CLAUDE.md"
     ```
-    Expected: `vite/5.4.21 ...`
+    Expected: File exists at repository root.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Run synthetic telemetry simulator simple scenario:
+[ ] Confirm exact section alignment with Master Plan Section 3:
     ```
-    cd backend && uv run python scripts/simulate_drift.py --scenario simple && cd ..
+    powershell -Command "Select-String -Path backend/CLAUDE.md -Pattern '## Strict Coding Rules|## Architecture Boundaries|## Strict Anti-Patterns|## Reference Documents'"
     ```
-    Expected: `[DRIFT EMITTED] Event: drift-evt-simple-001 | Node: render-07` with valid JSON payload.
-    If wrong: Ensure `pydantic` is installed in `backend/.venv`.
-
-[ ] Run synthetic telemetry simulator complex scenario:
-    ```
-    cd backend && uv run python scripts/simulate_drift.py --scenario complex && cd ..
-    ```
-    Expected: `[DRIFT EMITTED] Event: drift-evt-complex-002 | Node: render-12` with category `ambiguous`.
+    Expected: All 4 major section headings match verbatim.
+    If wrong: Re-verify against `AGENT_MASTER_PLAN.md` Section 3.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/pyproject.toml` — Backend manifest pinning Python 3.11 and all ADK, Gemini, Pydantic, async DB, and OTel dependencies.
-[ ] File: `backend/README.md` — Backend architecture and components reference.
-[ ] File: `backend/scripts/simulate_drift.py` — Synthetic drift telemetry CLI generator built with strict Pydantic V2 models.
-[ ] File: `frontend/package.json` — Frontend manifest pinning React 18, `@ag-ui/client`, `shadcn-ui`, Lucide, TypeScript, and Vite.
-[ ] Package: `google-adk@2.8.0` — Workflow Runtime orchestration framework.
-[ ] Package: `pydantic@2.13.5` — Strict schema validation for cognitive inputs and structured outputs.
-[ ] Package: `@ag-ui/client@0.0.59` — Frontend AG-UI SSE protocol client.
+[ ] File: `backend/CLAUDE.md` — Coding assistant context file with strict coding rules, architectural boundaries, anti-patterns, and reference specs.
+[ ] File: `CLAUDE.md` — Root assistant context file for workspace-level guidance.
+[ ] Feature: Coding Rules & Trust Boundaries — Codified async I/O mandate, Pydantic V2 dual-schema alignment, and tool-access isolation rules.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -51,32 +41,32 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Get-Item backend/pyproject.toml, backend/README.md, backend/scripts/simulate_drift.py, frontend/package.json"
+powershell -Command "Get-Item backend/CLAUDE.md, CLAUDE.md"
 ```
-✅ Expected: All 4 files returned without error.
-❌ If missing: Recreate missing manifest or script file.
+✅ Expected: Both files exist and display Length 5645 bytes.
+❌ If missing: Recreate missing `CLAUDE.md` file verbatim.
 
 Test 2 — Environment / Dependencies:
 ```
-uv run --project backend python -c "import pydantic, google.adk; print(f'pydantic: {pydantic.__version__}, adk: {google.adk.__version__}')"
+uv run --project backend python -c "import pydantic, google.adk; print('Environment healthy')"
 ```
-✅ Expected: `pydantic: 2.13.5, adk: 2.8.0`
-❌ If errors: Run `uv sync` in `backend/`.
+✅ Expected: `Environment healthy`
+❌ If errors: Re-run `uv sync` in `backend/`.
 
 Test 3 — Server or Process Start:
 ```
-uv run --project backend python -c "import uvicorn, fastapi; print('ASGI server packages imported successfully')"
+echo "Step 3 does not launch servers; context documentation generated."
 ```
-✅ Expected: `ASGI server packages imported successfully`
-❌ If errors: Re-run `uv sync` in `backend/`.
+✅ Expected: Clean exit.
+❌ If errors: N/A
 
 Test 4 — Functional Check:
-Run all mock scenarios in `backend/scripts/simulate_drift.py`:
+Inspect `backend/CLAUDE.md` for custom `AgentError` hierarchy and reducer boundaries:
 ```
-cd backend && uv run python scripts/simulate_drift.py --scenario edge && cd ..
+powershell -Command "Select-String -Path backend/CLAUDE.md -Pattern 'AgentError|merge-by-key|append-only|last-write-wins'"
 ```
-✅ Expected: `[DRIFT EMITTED] Event: drift-evt-edge-003 | Node: render-03` with 0 Loki lines and 1 Tempo span.
-❌ If wrong: Inspect `backend/scripts/simulate_drift.py` for syntax or Pydantic validation errors.
+✅ Expected: Matches found confirming all reducer types and exception classes are codified.
+❌ If wrong: Re-copy Section 3 verbatim into `backend/CLAUDE.md`.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore:
@@ -93,11 +83,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 2: Initialize Project Manifest & Install Dependencies — Backend uv sync, frontend pnpm install, simulate_drift.py"
+git commit -m "Step 3: Generate Coding Assistant Context File — Codify backend rules and architecture boundaries in CLAUDE.md"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 3 until:
+✋ DO NOT proceed to Step 4 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

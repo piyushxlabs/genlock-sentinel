@@ -13,3 +13,8 @@
 **Reason:** pnpm v11 enforces zero-trust execution of package lifecycle scripts by default. Pydantic V2 strict mode enforces the project's constitutional async I/O and schema validation mandate (`async-io-and-pydantic-validation-mandate.md`).
 **Impact:** Guarantees standard Vite bundling in frontend tooling and ensures all synthetic drift events conform to strict schema boundaries.
 ---
+
+---
+## Step 3 — Context File Generation
+Step 3 — No deviations from spec.
+---
