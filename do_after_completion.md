@@ -1,46 +1,45 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 8 COMPLETION CHECKLIST
-# Step 8: Initialize Checkpointing Backend
+# STEP 9 COMPLETION CHECKLIST
+# Step 9: Confirm No Long-Term Memory
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Run checkpointing unit tests:
+[ ] Run negative audit unit tests for long-term memory absence:
     ```
-    cd backend && uv run pytest tests/unit/test_checkpointing.py -v && cd ..
+    cd backend && uv run pytest tests/unit/test_no_long_term_memory.py -v && cd ..
     ```
-    Expected: 6 passed in <2s.
+    Expected: 3 passed in <1s.
 
 [ ] Run full backend unit test suite:
     ```
     cd backend && uv run pytest tests/unit/ -v && cd ..
     ```
-    Expected: 28 passed in <11s.
+    Expected: 31 passed in <11s.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Verify database connection URL resolution:
+[ ] Run manual grep check for vector store packages in pyproject.toml:
     ```
-    cd backend && uv run python -c "from src.state.checkpointing import get_database_url; print('Checkpoint DB URL:', get_database_url())" && cd ..
+    git grep -iE "(chromadb|pinecone|qdrant|weaviate|faiss|pgvector|milvus|langchain|crewai|llama_index)" backend/pyproject.toml
     ```
-    Expected: Shows `sqlite+aiosqlite:///.../sentinel_sessions.db` or PostgreSQL URL.
+    Expected: No matches (empty output).
 
-[ ] Verify table initialization and session creation in Python:
+[ ] Run manual grep check across source code tree:
     ```
-    cd backend && uv run python -c "import asyncio; from src.state.checkpointing import init_checkpoint_db, create_session_service; asyncio.run(init_checkpoint_db()); print('Checkpoint DB tables verified successfully')" && cd ..
+    git grep -iE "(chromadb|pinecone|qdrant|weaviate|faiss|milvus|langchain|crewai|llama_index)" backend/src/
     ```
-    Expected: `Checkpoint DB tables verified successfully`
+    Expected: No matches (empty output).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/src/state/checkpointing.py` — Checkpointing backend module using ADK `DatabaseSessionService` with async SQLAlchemy engines (`aiosqlite` and `asyncpg`).
-[ ] File: `backend/tests/unit/test_checkpointing.py` — Automated test suite covering table initialization, 100% round-trip fidelity, step evolution, and session management.
-[ ] File: `backend/src/state/schema.py` — Added enum pre-validators for seamless dictionary deserialization from database storage.
-[ ] File: `backend/src/state/__init__.py` — Exported checkpointing helper functions (`create_session_service`, `init_checkpoint_db`, `save_checkpoint`, `load_checkpoint`, `delete_checkpoint`, `list_checkpoints`).
-[ ] Dependency: `sqlalchemy@2.0.52` and `greenlet@3.5.5` — Installed via `uv` to enable ADK `DatabaseSessionService`.
+[ ] File: `backend/tests/unit/test_no_long_term_memory.py` — Automated negative audit test suite verifying absence of vector databases, long-term memory frameworks, and third-party orchestrators.
+[ ] Verification: `backend/pyproject.toml` confirmed free of unauthorized memory dependencies.
+[ ] Verification: `backend/src/` confirmed free of unauthorized vector store clients and imports.
+[ ] Verification: `GenlockSentinelState` confirmed strictly session-scoped with zero cross-session memory fields.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -48,31 +47,31 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Get-Item backend/src/state/checkpointing.py, backend/tests/unit/test_checkpointing.py"
+powershell -Command "Get-Item backend/tests/unit/test_no_long_term_memory.py"
 ```
-✅ Expected: Both files exist.
+✅ Expected: File exists.
 ❌ If missing: Recreate missing file.
 
 Test 2 — Environment / Dependencies:
 ```
-cd backend && uv run python -c "from google.adk.sessions import DatabaseSessionService; from src.state import save_checkpoint, load_checkpoint; print('DatabaseSessionService and checkpointing functions available')" && cd ..
+cd backend && uv run python -c "from src.state import GenlockSentinelState; assert 'embedding' not in str(GenlockSentinelState.model_fields); print('Session-scoped state verified without vector fields')" && cd ..
 ```
-✅ Expected: `DatabaseSessionService and checkpointing functions available`
-❌ If errors: Check imports and installed dependencies.
+✅ Expected: `Session-scoped state verified without vector fields`
+❌ If errors: Inspect `backend/src/state/schema.py`.
 
 Test 3 — Server or Process Start:
 ```
-cd backend && uv run python -c "from src.main import app; print('Server ready with checkpointing module')" && cd ..
+cd backend && uv run python -c "from src.main import app; print('Server ready with verified memory architecture')" && cd ..
 ```
-✅ Expected: `Server ready with checkpointing module`
+✅ Expected: `Server ready with verified memory architecture`
 ❌ If errors: Check imports in `src/main.py`.
 
 Test 4 — Functional Check:
-Run the complete Step 8 checkpointing test suite:
+Run the complete Step 9 test suite:
 ```
-cd backend && uv run pytest tests/unit/test_checkpointing.py -v && cd ..
+cd backend && uv run pytest tests/unit/test_no_long_term_memory.py -v && cd ..
 ```
-✅ Expected: All 6 tests PASSED.
+✅ Expected: All 3 tests PASSED.
 ❌ If wrong: Inspect failed test in pytest output.
 
 Test 5 — Security Check:
@@ -90,11 +89,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 8: Initialize Checkpointing Backend — ADK DatabaseSessionService, asyncpg/aiosqlite adapter, and round-trip tests"
+git commit -m "Step 9: Confirm No Long-Term Memory — Negative audit tests verifying exclusion of vector stores and cross-session memory"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 9 until:
+✋ DO NOT proceed to Step 10 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

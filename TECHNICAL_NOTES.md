@@ -51,3 +51,10 @@ Step 4 — No deviations from spec.
 **Reason:** Fulfills `AGENT_MASTER_PLAN.md` Section 4 Step 4 and Section 10 Step 8, strictly honoring `async-io-and-pydantic-validation-mandate.md` (no blocking DB calls). ADK's `DatabaseSessionService` handles table creation, row locking, and session lifecycle natively while maintaining zero-loss durability during HITL pause/resume.
 **Impact:** Enables durable graph execution checkpointing, seamless recovery after interruptions or crashes, and smooth resumption of HITL approval workflows in subsequent steps.
 ---
+
+---
+## Step 9 — Confirmation of No Long-Term Memory
+**Decision:** Confirmed and codified the strict absence of long-term memory systems, vector databases, and semantic search frameworks (`chromadb`, `pinecone`, `qdrant`, `weaviate`, `faiss`, `pgvector`, `milvus`, `langchain`, `crewai`, `llama-index`). Verified that `GenlockSentinelState` remains strictly session-scoped with no embedding models or cross-session persistence.
+**Reason:** Fulfills `AGENT_MASTER_PLAN.md` Section 1 (Explicit Non-Goals), Section 4 Step 5, Section 10 Step 9, and `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 7. Genlock Sentinel is an SRE cluster integrity agent operating on real-time deterministic metrics, logs, and traces. The three root causes are fixed deterministic categories, not retrieved documents. Adding vector storage would introduce unwarranted architectural bloat, token latency, and potential hallucination vectors.
+**Impact:** Guarantees an air-gapped, lean, deterministic agent runtime with zero cross-session state contamination or credential leakage.
+---

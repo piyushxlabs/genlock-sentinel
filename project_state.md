@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 8: Initialize Checkpointing Backend
+- **Last Completed Step:** Step 9: Confirm No Long-Term Memory
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -21,6 +21,7 @@
   - Authoritative 10-field central state `GenlockSentinelState` and child models in `backend/src/state/schema.py`
   - Deterministic state reducers and mutation dispatcher in `backend/src/state/reducers.py` (`immutable-after-init`, `merge-by-key`, `append-only`, `last-write-wins`)
   - Durable session state checkpointing backend in `backend/src/state/checkpointing.py` via ADK's `DatabaseSessionService` (supporting Cloud SQL `postgresql+asyncpg` and local SQLite `sqlite+aiosqlite`)
-  - 28 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, and checkpointing round-trip
-- **Pending Next Step:** Step 9: Confirm No Long-Term Memory
+  - Constitutional confirmation and negative audit tests in `backend/tests/unit/test_no_long_term_memory.py` verifying zero vector databases, zero external memory frameworks, and strictly session-scoped state
+  - 31 unit tests passing 100% across all unit test suites
+- **Pending Next Step:** Step 10: Register Tools
 - **Known Issues / Blockers:** None
