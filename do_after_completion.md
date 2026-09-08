@@ -1,39 +1,40 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 3 COMPLETION CHECKLIST
-# Step 3: Generate Coding Assistant Context File
+# STEP 4 COMPLETION CHECKLIST
+# Step 4: Scaffold Directory Structure
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify coding assistant context file in `backend/CLAUDE.md`:
+[ ] Verify backend source package markers:
     ```
-    powershell -Command "Get-Content backend/CLAUDE.md | Select-Object -First 10"
+    powershell -Command "Get-ChildItem -Path backend/src -Filter __init__.py -Recurse | Select-Object FullName"
     ```
-    Expected: Header `# Genlock Sentinel — Coding Assistant Context` and Project Overview.
+    Expected: Lists 11 `__init__.py` files across all backend modules.
 
-[ ] Verify root `CLAUDE.md` context file:
+[ ] Verify backend test package markers:
     ```
-    powershell -Command "Get-Item CLAUDE.md"
+    powershell -Command "Get-ChildItem -Path backend/tests -Filter __init__.py -Recurse | Select-Object FullName"
     ```
-    Expected: File exists at repository root.
+    Expected: Lists 5 `__init__.py` files across test directories.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Confirm exact section alignment with Master Plan Section 3:
+[ ] Confirm directory layout matches `AGENT_MASTER_PLAN.md` Section 2:
     ```
-    powershell -Command "Select-String -Path backend/CLAUDE.md -Pattern '## Strict Coding Rules|## Architecture Boundaries|## Strict Anti-Patterns|## Reference Documents'"
+    powershell -Command "Get-ChildItem -Path backend/src, backend/tests, frontend/src -Directory | Select-Object Name"
     ```
-    Expected: All 4 major section headings match verbatim.
-    If wrong: Re-verify against `AGENT_MASTER_PLAN.md` Section 3.
+    Expected: `agents`, `safety`, `state`, `structured_outputs`, `telemetry`, `tools`, `ui`, `utils`, `evals`, `hitl`, `mocks`, `unit`, `components`, `stream`.
+    If wrong: Recreate missing subdirectories.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/CLAUDE.md` — Coding assistant context file with strict coding rules, architectural boundaries, anti-patterns, and reference specs.
-[ ] File: `CLAUDE.md` — Root assistant context file for workspace-level guidance.
-[ ] Feature: Coding Rules & Trust Boundaries — Codified async I/O mandate, Pydantic V2 dual-schema alignment, and tool-access isolation rules.
+[ ] Tree: `backend/src/` — Modular subpackages: `agents`, `tools`, `tools/schemas`, `tools/mcp_clients`, `structured_outputs`, `state`, `telemetry`, `ui`, `safety`, `utils`.
+[ ] Tree: `backend/tests/` — Test suite scaffolding: `mocks`, `unit`, `evals`, `hitl`.
+[ ] Tree: `frontend/src/` — Component and streaming scaffolding: `components`, `stream`.
+[ ] File: `frontend/src/vite-env.d.ts` — TypeScript Vite client environment declarations.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -41,32 +42,32 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Get-Item backend/CLAUDE.md, CLAUDE.md"
+powershell -Command "Test-Path backend/src/agents, backend/src/tools, backend/src/state, backend/src/ui, backend/tests/unit, frontend/src/components"
 ```
-✅ Expected: Both files exist and display Length 5645 bytes.
-❌ If missing: Recreate missing `CLAUDE.md` file verbatim.
+✅ Expected: `True` for all paths.
+❌ If missing: Recreate missing directory path.
 
 Test 2 — Environment / Dependencies:
 ```
-uv run --project backend python -c "import pydantic, google.adk; print('Environment healthy')"
+cd backend && uv run python -c "import src.agents, src.tools, src.state; print('All backend modules importable')" && cd ..
 ```
-✅ Expected: `Environment healthy`
-❌ If errors: Re-run `uv sync` in `backend/`.
+✅ Expected: `All backend modules importable`
+❌ If errors: Ensure `__init__.py` is present in each package.
 
 Test 3 — Server or Process Start:
 ```
-echo "Step 3 does not launch servers; context documentation generated."
+echo "Step 4 scaffolds directory trees; no background server required."
 ```
 ✅ Expected: Clean exit.
 ❌ If errors: N/A
 
 Test 4 — Functional Check:
-Inspect `backend/CLAUDE.md` for custom `AgentError` hierarchy and reducer boundaries:
+Run package import verification across all backend subpackages:
 ```
-powershell -Command "Select-String -Path backend/CLAUDE.md -Pattern 'AgentError|merge-by-key|append-only|last-write-wins'"
+cd backend && uv run python -c "import src.structured_outputs, src.telemetry, src.safety, src.utils, tests.mocks; print('Full package tree verified')" && cd ..
 ```
-✅ Expected: Matches found confirming all reducer types and exception classes are codified.
-❌ If wrong: Re-copy Section 3 verbatim into `backend/CLAUDE.md`.
+✅ Expected: `Full package tree verified`
+❌ If wrong: Check for missing `__init__.py` files.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore:
@@ -83,11 +84,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 3: Generate Coding Assistant Context File — Codify backend rules and architecture boundaries in CLAUDE.md"
+git commit -m "Step 4: Scaffold Directory Structure — Full modular source, test, and frontend tree"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 4 until:
+✋ DO NOT proceed to Step 5 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

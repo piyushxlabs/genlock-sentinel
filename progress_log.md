@@ -106,3 +106,46 @@
 - Verified `backend/CLAUDE.md` and `CLAUDE.md` exist and match `AGENT_MASTER_PLAN.md` Section 3 verbatim (5645 bytes).
 - Pass
 ---
+
+---
+## Step 4 — Scaffold Directory Structure
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Scaffolded the entire backend directory tree under `backend/src/` (`agents/`, `tools/`, `tools/schemas/`, `tools/mcp_clients/`, `structured_outputs/`, `state/`, `telemetry/`, `ui/`, `safety/`, `utils/`) with typed package `__init__.py` markers.
+- Scaffolded backend test tree under `backend/tests/` (`mocks/`, `unit/`, `evals/`, `hitl/`) with package markers.
+- Scaffolded frontend console directory tree under `frontend/src/` (`components/`, `stream/`) and `frontend/tests/` with `vite-env.d.ts` types.
+
+**Files Created:**
+- `backend/src/__init__.py` — Root backend package marker.
+- `backend/src/agents/__init__.py` — Workflow runtime agents package.
+- `backend/src/tools/__init__.py` — Tool implementations package.
+- `backend/src/tools/schemas/__init__.py` — Dual schemas package.
+- `backend/src/tools/mcp_clients/__init__.py` — MCP client adapters package.
+- `backend/src/structured_outputs/__init__.py` — Structured output models package.
+- `backend/src/state/__init__.py` — State and reducers package.
+- `backend/src/telemetry/__init__.py` — OTel telemetry package.
+- `backend/src/ui/__init__.py` — AG-UI bridge package.
+- `backend/src/safety/__init__.py` — Safety guards and Model Armor package.
+- `backend/src/utils/__init__.py` — Utilities package.
+- `backend/tests/__init__.py` — Test suite root package.
+- `backend/tests/mocks/__init__.py` — Mock data package.
+- `backend/tests/unit/__init__.py` — Unit test package.
+- `backend/tests/evals/__init__.py` — LLM evaluation package.
+- `backend/tests/hitl/__init__.py` — HITL resumption test package.
+- `frontend/src/vite-env.d.ts` — TypeScript Vite client environment declarations.
+- `frontend/src/components/.gitkeep` — Generative UI components directory marker.
+- `frontend/src/stream/.gitkeep` — Stream runtime directory marker.
+- `frontend/tests/.gitkeep` — Frontend test directory marker.
+
+**Files Modified:**
+- None
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- Verified all 16 subdirectories under `backend/src`, `backend/tests`, and `frontend/src` exist and match Section 2 directory tree specification.
+- Pass
+---

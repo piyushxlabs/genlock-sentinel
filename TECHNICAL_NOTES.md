@@ -18,3 +18,8 @@
 ## Step 3 — Context File Generation
 Step 3 — No deviations from spec.
 ---
+
+---
+## Step 4 — Directory Scaffolding
+Step 4 — No deviations from spec.
+---
