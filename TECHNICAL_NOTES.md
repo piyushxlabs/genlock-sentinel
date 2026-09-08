@@ -23,3 +23,10 @@ Step 3 — No deviations from spec.
 ## Step 4 — Directory Scaffolding
 Step 4 — No deviations from spec.
 ---
+
+---
+## Step 5 — ADK 2.8.0 StreamingMode.SSE & Vertex AI Environment Adapter
+**Decision:** Configured `StreamingMode.SSE` via `google.adk.agents._streaming_mode.StreamingMode` in `RunConfig` and implemented dynamic credential path normalization to absolute paths for `GOOGLE_APPLICATION_CREDENTIALS` with `GOOGLE_GENAI_USE_VERTEXAI="true"` in `backend/src/main.py`.
+**Reason:** ADK 2.8.0 encapsulates `StreamingMode` within the agents package; relative credential paths like `./gcp-key.json` fail if invoked from subdirectories unless resolved relative to `backend/`. Vertex AI mode ensures seamless enterprise token resolution.
+**Impact:** Guarantees deterministic SSE streaming and robust authentication across both CLI test runs and FastAPI ASGI worker processes.
+---

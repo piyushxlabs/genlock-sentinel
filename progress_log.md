@@ -149,3 +149,32 @@
 - Verified all 16 subdirectories under `backend/src`, `backend/tests`, and `frontend/src` exist and match Section 2 directory tree specification.
 - Pass
 ---
+
+---
+## Step 5 — Initialize ADK Runner
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented `backend/src/main.py` configuring Google ADK 2.x `Runner` with `RunConfig(streaming_mode=StreamingMode.SSE)`.
+- Configured dynamic environment loading and credential normalization resolving relative `GOOGLE_APPLICATION_CREDENTIALS` paths and activating Vertex AI backend mode.
+- Implemented factory functions: `get_streaming_mode()`, `get_default_session_service()`, `create_default_workflow()`, `create_adk_runner()`, and async `run_noop_agent()`.
+- Implemented FastAPI application instance with `/health` and root endpoints.
+- Implemented automated test suite in `backend/tests/unit/test_runner_bootstrap.py` covering runner instantiation, SSE streaming mode verification, end-to-end trivial workflow execution, and FastAPI health endpoint checks.
+
+**Files Created:**
+- `backend/src/main.py` — Application entry point, ADK Runner bootstrap with SSE streaming, and FastAPI server.
+- `backend/tests/unit/test_runner_bootstrap.py` — Unit tests for ADK Runner instantiation, SSE mode, and health check.
+
+**Files Modified:**
+- None
+
+**Packages Installed:**
+- `pytest@9.1.1` — Python testing framework (dev dependency).
+- `pytest-asyncio@1.4.0` — Async test runner for pytest (dev dependency).
+
+**Verification Result:**
+- `uv run python src/main.py` executed cleanly with code 0 (`Bootstrap run completed successfully! Total Events: 1`).
+- `uv run pytest tests/unit/test_runner_bootstrap.py -v` ran 4 tests, 4 passed (100% pass rate).
+- Pass
+---

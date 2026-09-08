@@ -1,40 +1,40 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 4 COMPLETION CHECKLIST
-# Step 4: Scaffold Directory Structure
+# STEP 5 COMPLETION CHECKLIST
+# Step 5: Initialize ADK Runner
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify backend source package markers:
+[ ] Run trivial no-op ADK Runner bootstrap from backend:
     ```
-    powershell -Command "Get-ChildItem -Path backend/src -Filter __init__.py -Recurse | Select-Object FullName"
+    cd backend && uv run python src/main.py && cd ..
     ```
-    Expected: Lists 11 `__init__.py` files across all backend modules.
+    Expected: `Bootstrap run completed successfully! Total Events: 1`
 
-[ ] Verify backend test package markers:
+[ ] Run automated unit test suite:
     ```
-    powershell -Command "Get-ChildItem -Path backend/tests -Filter __init__.py -Recurse | Select-Object FullName"
+    cd backend && uv run pytest tests/unit/test_runner_bootstrap.py -v && cd ..
     ```
-    Expected: Lists 5 `__init__.py` files across test directories.
+    Expected: 4 passed in ~2s.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Confirm directory layout matches `AGENT_MASTER_PLAN.md` Section 2:
+[ ] Verify FastAPI server health endpoint:
     ```
-    powershell -Command "Get-ChildItem -Path backend/src, backend/tests, frontend/src -Directory | Select-Object Name"
+    cd backend && uv run python -c "import asyncio, httpx; from src.main import app; transport = httpx.ASGITransport(app=app); client = httpx.AsyncClient(transport=transport, base_url='http://test'); resp = asyncio.run(client.get('/health')); print('Health check:', resp.status_code, resp.json())" && cd ..
     ```
-    Expected: `agents`, `safety`, `state`, `structured_outputs`, `telemetry`, `tools`, `ui`, `utils`, `evals`, `hitl`, `mocks`, `unit`, `components`, `stream`.
-    If wrong: Recreate missing subdirectories.
+    Expected: `Health check: 200 {'status': 'healthy', 'app_name': 'genlock_sentinel', 'streaming_mode': 'SSE', ...}`
+    If wrong: Ensure `src/main.py` is present and `StreamingMode.SSE` is loaded.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] Tree: `backend/src/` — Modular subpackages: `agents`, `tools`, `tools/schemas`, `tools/mcp_clients`, `structured_outputs`, `state`, `telemetry`, `ui`, `safety`, `utils`.
-[ ] Tree: `backend/tests/` — Test suite scaffolding: `mocks`, `unit`, `evals`, `hitl`.
-[ ] Tree: `frontend/src/` — Component and streaming scaffolding: `components`, `stream`.
-[ ] File: `frontend/src/vite-env.d.ts` — TypeScript Vite client environment declarations.
+[ ] File: `backend/src/main.py` — Application entry point, ADK 2.x Runner configured with StreamingMode.SSE, Vertex AI credential alignment, and FastAPI `/health` endpoint.
+[ ] File: `backend/tests/unit/test_runner_bootstrap.py` — Automated unit test suite covering runner instantiation, SSE mode, trivial no-op run, and health checks.
+[ ] Feature: ADK 2.x Runner Bootstrap — Implements `create_adk_runner` and `run_noop_agent` yielding native ADK SSE events.
+[ ] Config: Vertex AI credential auto-resolution and environment normalization.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -42,32 +42,32 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Test-Path backend/src/agents, backend/src/tools, backend/src/state, backend/src/ui, backend/tests/unit, frontend/src/components"
+powershell -Command "Get-Item backend/src/main.py, backend/tests/unit/test_runner_bootstrap.py"
 ```
-✅ Expected: `True` for all paths.
-❌ If missing: Recreate missing directory path.
+✅ Expected: Both files exist.
+❌ If missing: Recreate missing file.
 
 Test 2 — Environment / Dependencies:
 ```
-cd backend && uv run python -c "import src.agents, src.tools, src.state; print('All backend modules importable')" && cd ..
+cd backend && uv run python -c "from google.adk import Runner; from google.adk.agents._streaming_mode import StreamingMode; print('ADK Runner & StreamingMode.SSE OK')" && cd ..
 ```
-✅ Expected: `All backend modules importable`
-❌ If errors: Ensure `__init__.py` is present in each package.
+✅ Expected: `ADK Runner & StreamingMode.SSE OK`
+❌ If errors: Ensure `google-adk` is synced in virtual environment.
 
 Test 3 — Server or Process Start:
 ```
-echo "Step 4 scaffolds directory trees; no background server required."
+cd backend && uv run python -c "from src.main import app; print('FastAPI app loaded:', app.title)" && cd ..
 ```
-✅ Expected: Clean exit.
-❌ If errors: N/A
+✅ Expected: `FastAPI app loaded: Genlock Sentinel Agent API`
+❌ If errors: Check imports in `backend/src/main.py`.
 
 Test 4 — Functional Check:
-Run package import verification across all backend subpackages:
+Run the complete Step 5 test suite:
 ```
-cd backend && uv run python -c "import src.structured_outputs, src.telemetry, src.safety, src.utils, tests.mocks; print('Full package tree verified')" && cd ..
+cd backend && uv run pytest tests/unit/test_runner_bootstrap.py -v && cd ..
 ```
-✅ Expected: `Full package tree verified`
-❌ If wrong: Check for missing `__init__.py` files.
+✅ Expected: All 4 tests PASSED.
+❌ If wrong: Inspect failed test report in pytest output.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore:
@@ -84,11 +84,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 4: Scaffold Directory Structure — Full modular source, test, and frontend tree"
+git commit -m "Step 5: Initialize ADK Runner — Implement Runner with StreamingMode.SSE, FastAPI health check, and bootstrap tests"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 5 until:
+✋ DO NOT proceed to Step 6 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

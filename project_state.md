@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 4: Scaffold Directory Structure
+- **Last Completed Step:** Step 5: Initialize ADK Runner
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -14,5 +14,7 @@
   - Synthetic drift telemetry simulator `backend/scripts/simulate_drift.py` operational with strict Pydantic V2 schemas
   - Coding Assistant Context files (`backend/CLAUDE.md`, `CLAUDE.md`) established verbatim from Section 3
   - Complete modular directory scaffolding across backend source, test suites, and frontend components
-- **Pending Next Step:** Step 5: Initialize ADK Runner
+  - ADK 2.x Runner bootstrap in `backend/src/main.py` configured with `StreamingMode.SSE` and verified via end-to-end execution
+  - FastAPI `/health` endpoint and test suite in `backend/tests/unit/test_runner_bootstrap.py` passing 100%
+- **Pending Next Step:** Step 6: Configure Models
 - **Known Issues / Blockers:** None
