@@ -214,3 +214,36 @@
 - Live Gemini API call confirmed generating schema-valid `EvidenceBundleExtraction` JSON.
 - Pass
 ---
+## Step 7 — Implement Typed State Schema & Reducers
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented `GenlockSentinelState` and child models in `backend/src/state/schema.py` strictly enforcing `ConfigDict(strict=True, extra="forbid")` across all 10 state fields and supporting structured output conversions (`from_extraction`, `from_diagnosis`, `from_package`).
+- Implemented custom error hierarchy in `backend/src/utils/errors.py` rooted at `AgentError` with `StateValidationError`, `ToolExecutionError`, `SafetyViolationError`, and `CircuitBreakerTrippedError`.
+- Implemented deterministic functional reducers in `backend/src/state/reducers.py`:
+  - `reduce_immutable`: Strict rejection of post-init mutation on `session_id` and `config` raising `StateValidationError`.
+  - `reduce_merge_by_key`: Non-destructive keyed dictionary merge for `active_drift_events` (by `node_id`) and `evidence_bundle` (by `event_id`).
+  - `reduce_append_only`: Strict append-only list extension for `diagnosis_history`, `remediation_log`, and `error_logs`.
+  - `reduce_last_write_wins`: Deterministic authoritative overwrite for `pending_hitl_card`, `approval_state`, and `session_status`.
+  - `reduce_state` and `reduce_state_batch`: Atomic state update dispatchers validating deltas, rejecting undeclared fields, and reconstructing validated `GenlockSentinelState`.
+- Exported all models and reducers via `backend/src/state/__init__.py`.
+- Implemented unit test suite `backend/tests/unit/test_state_and_reducers.py` with 11 test functions validating immutability, merge-by-key, append-only, last-write-wins, unauthorized delta rejection, and batch reductions.
+
+**Files Created:**
+- `backend/src/utils/errors.py` — Custom error hierarchy with `AgentError` and `StateValidationError`.
+- `backend/src/state/schema.py` — Pydantic V2 state schema defining `GenlockSentinelState` and all 9 child types.
+- `backend/src/state/reducers.py` — State reducers and mutation dispatcher for all 10 state fields.
+- `backend/tests/unit/test_state_and_reducers.py` — Unit test suite for state schema and reducers.
+
+**Files Modified:**
+- `backend/src/state/__init__.py` — Exported state models, enums, and reducer functions.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_state_and_reducers.py -v` passed all 11 tests.
+- Full unit test suite `uv run pytest tests/unit/ -v` passed all 22 tests in 9.86s with 100% pass rate.
+- Pass
+---

@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 6: Configure Models
+- **Last Completed Step:** Step 7: Implement Typed State Schema & Reducers
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -17,6 +17,9 @@
   - ADK 2.x Runner bootstrap in `backend/src/main.py` configured with `StreamingMode.SSE`
   - Dynamic Gemini model configuration in `backend/src/agents/model_config.py` (reasoning at `temperature=0.0`, fast execution, context caching, and dual-mode execution)
   - Strict Pydantic V2 structured output schemas (`EvidenceBundleExtraction`, `RootCauseDiagnosis`, `HITLCardPackage`) with `extra="forbid"`
-  - 11 unit tests passing 100% across runner bootstrap and model configuration
-- **Pending Next Step:** Step 7: Implement Typed State Schema & Reducers
+  - Custom `AgentError` hierarchy with `StateValidationError` in `backend/src/utils/errors.py`
+  - Authoritative 10-field central state `GenlockSentinelState` and child models in `backend/src/state/schema.py`
+  - Deterministic state reducers and mutation dispatcher in `backend/src/state/reducers.py` (`immutable-after-init`, `merge-by-key`, `append-only`, `last-write-wins`)
+  - 22 unit tests passing 100% across runner bootstrap, model configuration, state schema, and reducers
+- **Pending Next Step:** Step 8: Initialize Checkpointing Backend
 - **Known Issues / Blockers:** None

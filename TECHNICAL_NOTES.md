@@ -37,3 +37,10 @@ Step 4 — No deviations from spec.
 **Reason:** Allows configuring independent models for reasoning vs triage/HITL roles dynamically; satisfies the constitutional zero-hallucination mandate; guarantees uninterrupted testing even during temporary upstream API demand spikes.
 **Impact:** Nodes 2, 3, and 5 can consume their designated model tiers with strict Pydantic V2 type validation and resilient error recovery.
 ---
+
+---
+## Step 7 — State Reducers and Immutability Enforcement
+**Decision:** Implemented pure functional reducer primitives (`reduce_immutable`, `reduce_merge_by_key`, `reduce_append_only`, `reduce_last_write_wins`) and a central mutation dispatcher `reduce_state` in `backend/src/state/reducers.py` with custom `StateValidationError` (derived from `AgentError`), strictly forbidding extra delta fields.
+**Reason:** Satisfies `state-invariants-and-tool-preconditions.md` and `code-level-verification-over-model-discretion.md`. Enforces that `session_id` and `config` cannot drift mid-session, concurrent node drift events cannot collide, and audit trails (`diagnosis_history`, `remediation_log`, `error_logs`) can never lose entries under sequential or asynchronous state mutations.
+**Impact:** Provides bulletproof typed state mutations for ADK Workflow runtime nodes, SSE streaming state-deltas, and session checkpointing backends.
+---
