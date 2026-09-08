@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 5: Initialize ADK Runner
+- **Last Completed Step:** Step 6: Configure Models
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -14,7 +14,9 @@
   - Synthetic drift telemetry simulator `backend/scripts/simulate_drift.py` operational with strict Pydantic V2 schemas
   - Coding Assistant Context files (`backend/CLAUDE.md`, `CLAUDE.md`) established verbatim from Section 3
   - Complete modular directory scaffolding across backend source, test suites, and frontend components
-  - ADK 2.x Runner bootstrap in `backend/src/main.py` configured with `StreamingMode.SSE` and verified via end-to-end execution
-  - FastAPI `/health` endpoint and test suite in `backend/tests/unit/test_runner_bootstrap.py` passing 100%
-- **Pending Next Step:** Step 6: Configure Models
+  - ADK 2.x Runner bootstrap in `backend/src/main.py` configured with `StreamingMode.SSE`
+  - Dynamic Gemini model configuration in `backend/src/agents/model_config.py` (reasoning at `temperature=0.0`, fast execution, context caching, and dual-mode execution)
+  - Strict Pydantic V2 structured output schemas (`EvidenceBundleExtraction`, `RootCauseDiagnosis`, `HITLCardPackage`) with `extra="forbid"`
+  - 11 unit tests passing 100% across runner bootstrap and model configuration
+- **Pending Next Step:** Step 7: Implement Typed State Schema & Reducers
 - **Known Issues / Blockers:** None

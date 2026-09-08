@@ -1,40 +1,41 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 5 COMPLETION CHECKLIST
-# Step 5: Initialize ADK Runner
+# STEP 6 COMPLETION CHECKLIST
+# Step 6: Configure Models
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Run trivial no-op ADK Runner bootstrap from backend:
+[ ] Run model configuration and structured output unit tests:
     ```
-    cd backend && uv run python src/main.py && cd ..
+    cd backend && uv run pytest tests/unit/test_model_config.py -v && cd ..
     ```
-    Expected: `Bootstrap run completed successfully! Total Events: 1`
+    Expected: 7 passed.
 
-[ ] Run automated unit test suite:
+[ ] Run full backend test suite:
     ```
-    cd backend && uv run pytest tests/unit/test_runner_bootstrap.py -v && cd ..
+    cd backend && uv run pytest tests/unit/ -v && cd ..
     ```
-    Expected: 4 passed in ~2s.
+    Expected: 11 passed in <10s.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Verify FastAPI server health endpoint:
+[ ] Verify dynamic model resolution from `backend/.env`:
     ```
-    cd backend && uv run python -c "import asyncio, httpx; from src.main import app; transport = httpx.ASGITransport(app=app); client = httpx.AsyncClient(transport=transport, base_url='http://test'); resp = asyncio.run(client.get('/health')); print('Health check:', resp.status_code, resp.json())" && cd ..
+    cd backend && uv run python -c "from src.agents.model_config import get_reasoning_model_name, get_fast_model_name; print('Reasoning Model:', get_reasoning_model_name()); print('Fast Model:', get_fast_model_name())" && cd ..
     ```
-    Expected: `Health check: 200 {'status': 'healthy', 'app_name': 'genlock_sentinel', 'streaming_mode': 'SSE', ...}`
-    If wrong: Ensure `src/main.py` is present and `StreamingMode.SSE` is loaded.
+    Expected: Displays the exact models configured in `.env` (e.g. `gemini-3.8-flash` and `gemini-3.7-flash`).
+    If wrong: Check `backend/.env` line 8 and 9.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/src/main.py` — Application entry point, ADK 2.x Runner configured with StreamingMode.SSE, Vertex AI credential alignment, and FastAPI `/health` endpoint.
-[ ] File: `backend/tests/unit/test_runner_bootstrap.py` — Automated unit test suite covering runner instantiation, SSE mode, trivial no-op run, and health checks.
-[ ] Feature: ADK 2.x Runner Bootstrap — Implements `create_adk_runner` and `run_noop_agent` yielding native ADK SSE events.
-[ ] Config: Vertex AI credential auto-resolution and environment normalization.
+[ ] File: `backend/src/structured_outputs/evidence_bundle_extraction.py` — Pydantic V2 schema for Node 2 Evidence Triage with strict `extra="forbid"`.
+[ ] File: `backend/src/structured_outputs/root_cause_diagnosis.py` — Pydantic V2 schema for Node 3 Root-Cause Correlation with strict `extra="forbid"`.
+[ ] File: `backend/src/structured_outputs/hitl_card_package.py` — Pydantic V2 schema for Node 5 HITL Card Generation with strict `extra="forbid"`.
+[ ] File: `backend/src/agents/model_config.py` — Model registry with dynamic env resolution, `temperature=0.0` enforcement, context caching, and dual-mode execution.
+[ ] File: `backend/tests/unit/test_model_config.py` — Unit test suite verifying schema validation, context cache configuration, and live/mock structured outputs.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -42,32 +43,32 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Get-Item backend/src/main.py, backend/tests/unit/test_runner_bootstrap.py"
+powershell -Command "Get-Item backend/src/structured_outputs/evidence_bundle_extraction.py, backend/src/structured_outputs/root_cause_diagnosis.py, backend/src/structured_outputs/hitl_card_package.py, backend/src/agents/model_config.py, backend/tests/unit/test_model_config.py"
 ```
-✅ Expected: Both files exist.
+✅ Expected: All 5 files exist.
 ❌ If missing: Recreate missing file.
 
 Test 2 — Environment / Dependencies:
 ```
-cd backend && uv run python -c "from google.adk import Runner; from google.adk.agents._streaming_mode import StreamingMode; print('ADK Runner & StreamingMode.SSE OK')" && cd ..
+cd backend && uv run python -c "from src.structured_outputs import EvidenceBundleExtraction, RootCauseDiagnosis, HITLCardPackage; print('Structured output models loaded successfully')" && cd ..
 ```
-✅ Expected: `ADK Runner & StreamingMode.SSE OK`
-❌ If errors: Ensure `google-adk` is synced in virtual environment.
+✅ Expected: `Structured output models loaded successfully`
+❌ If errors: Ensure `backend/src/structured_outputs/__init__.py` exports all models.
 
 Test 3 — Server or Process Start:
 ```
-cd backend && uv run python -c "from src.main import app; print('FastAPI app loaded:', app.title)" && cd ..
+cd backend && uv run python -c "from src.main import app; print('Server ready with configured models')" && cd ..
 ```
-✅ Expected: `FastAPI app loaded: Genlock Sentinel Agent API`
-❌ If errors: Check imports in `backend/src/main.py`.
+✅ Expected: `Server ready with configured models`
+❌ If errors: Check imports in `src/main.py`.
 
 Test 4 — Functional Check:
-Run the complete Step 5 test suite:
+Run the complete Step 6 test suite:
 ```
-cd backend && uv run pytest tests/unit/test_runner_bootstrap.py -v && cd ..
+cd backend && uv run pytest tests/unit/test_model_config.py -v && cd ..
 ```
-✅ Expected: All 4 tests PASSED.
-❌ If wrong: Inspect failed test report in pytest output.
+✅ Expected: All 7 tests PASSED.
+❌ If wrong: Inspect failed test in pytest output.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore:
@@ -84,11 +85,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 5: Initialize ADK Runner — Implement Runner with StreamingMode.SSE, FastAPI health check, and bootstrap tests"
+git commit -m "Step 6: Configure Models — Structured output schemas, dynamic model configuration, and dual-mode inference"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 6 until:
+✋ DO NOT proceed to Step 7 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

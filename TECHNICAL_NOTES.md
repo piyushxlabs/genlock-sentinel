@@ -30,3 +30,10 @@ Step 4 — No deviations from spec.
 **Reason:** ADK 2.8.0 encapsulates `StreamingMode` within the agents package; relative credential paths like `./gcp-key.json` fail if invoked from subdirectories unless resolved relative to `backend/`. Vertex AI mode ensures seamless enterprise token resolution.
 **Impact:** Guarantees deterministic SSE streaming and robust authentication across both CLI test runs and FastAPI ASGI worker processes.
 ---
+
+---
+## Step 6 — Dynamic Model Configuration & Dual-Mode Structured Outputs
+**Decision:** Implemented `backend/src/agents/model_config.py` to dynamically pull `GEMINI_REASONING_MODEL` (e.g. `gemini-3.8-flash` / `gemini-3.1-pro`) and `GEMINI_FAST_MODEL` (e.g. `gemini-3.7-flash`) from `backend/.env` without hardcoding; enforced `temperature=0.0` for reasoning; codified shared static prompt for context caching; and implemented exponential backoff (1s, 2s, 4s) with Section 9.1 mock fallback.
+**Reason:** Allows configuring independent models for reasoning vs triage/HITL roles dynamically; satisfies the constitutional zero-hallucination mandate; guarantees uninterrupted testing even during temporary upstream API demand spikes.
+**Impact:** Nodes 2, 3, and 5 can consume their designated model tiers with strict Pydantic V2 type validation and resilient error recovery.
+---

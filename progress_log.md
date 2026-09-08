@@ -178,3 +178,39 @@
 - `uv run pytest tests/unit/test_runner_bootstrap.py -v` ran 4 tests, 4 passed (100% pass rate).
 - Pass
 ---
+
+---
+## Step 6 — Configure Models
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Created strict Pydantic V2 structured output models in `backend/src/structured_outputs/`:
+  - `EvidenceBundleExtraction` (`event_id`, `logs_available`, `log_summary`, `trace_summary`, `anomaly`) with `model_config = ConfigDict(strict=True, extra="forbid")`.
+  - `RootCauseDiagnosis` (`event_id`, `category`, `confidence`, `rationale`) with `model_config = ConfigDict(strict=True, extra="forbid")`.
+  - `HITLCardPackage` (`event_id`, `escalation_reason`, `proposed_action`, `cost_delta_estimate`, `visual_impact_score`, `root_cause_summary`) with `model_config = ConfigDict(strict=True, extra="forbid")`.
+- Implemented dynamic model configuration in `backend/src/agents/model_config.py` dynamically resolving `GEMINI_REASONING_MODEL` and `GEMINI_FAST_MODEL` from `backend/.env` without hardcoding, supporting independent models (e.g. `gemini-3.8-flash` for reasoning and `gemini-3.7-flash` for fast triage/HITL).
+- Enforced strict `temperature=0.0` for the reasoning role per `defensive-execution-structured-outputs-and-fallbacks.md`.
+- Implemented shared static system prompt `SHARED_SYSTEM_PROMPT_STATIC` with context caching configuration.
+- Implemented `generate_structured_output` supporting live Gemini inference with exponential backoff retries (1s, 2s, 4s) and grounded Section 9.1 mock fallbacks.
+- Built comprehensive unit test suite in `backend/tests/unit/test_model_config.py` (7 tests, all passed, including live API structured output generation).
+
+**Files Created:**
+- `backend/src/structured_outputs/evidence_bundle_extraction.py` — Pydantic V2 schema for Node 2 Evidence Triage.
+- `backend/src/structured_outputs/root_cause_diagnosis.py` — Pydantic V2 schema for Node 3 Root-Cause Correlation.
+- `backend/src/structured_outputs/hitl_card_package.py` — Pydantic V2 schema for Node 5 HITL Card Generation.
+- `backend/src/agents/model_config.py` — Dynamic model configuration factory with dual-mode inference and context caching.
+- `backend/tests/unit/test_model_config.py` — Automated unit tests for model configuration and structured outputs.
+
+**Files Modified:**
+- `backend/src/structured_outputs/__init__.py` — Exported all three structured output models.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_model_config.py -v` passed all 7 tests.
+- Full unit test suite `uv run pytest tests/unit/ -v` passed all 11 tests in 9.63s with 100% pass rate.
+- Live Gemini API call confirmed generating schema-valid `EvidenceBundleExtraction` JSON.
+- Pass
+---
