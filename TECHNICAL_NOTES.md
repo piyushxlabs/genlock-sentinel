@@ -86,3 +86,11 @@ Step 4 — No deviations from spec.
 **Reason:** Strictly fulfills `AGENT_MASTER_PLAN.md` Section 8, Section 10 Step 13, `scope-screening-and-safety-gate-order.md`, `state-invariants-and-tool-preconditions.md`, and `code-level-verification-over-model-discretion.md`. Live virtual production stages incur $50,000–$150,000/hour burn rates where untrusted telemetry payloads or hallucinated tool executions could cause unrecoverable physical stage damage, camera desync, or data leakage. Security and trust boundaries must be structurally guaranteed in code rather than left to LLM discretion.
 **Impact:** Ensures all telemetry ingested from Grafana and Tempo MCP servers is automatically sanitized before reaching Gemini model context windows, guarantees that raw credentials can never enter session checkpoints or supervisor UIs, and prevents unauthorized tool dispatch across all nodes.
 ---
+
+---
+## Step 14 — FastAPI Operations Endpoints, Pydantic V2 Strict Payloads & Checkpoint Durability
+**Decision:** Implemented operations endpoints in `backend/src/main.py` (`GET /healthz`, `GET /health`, `GET /`, `POST /sessions/{session_id}/events/{event_id}/decision`, and `POST /sessions/{session_id}/stop`) with strict Pydantic V2 request/response models (`extra="forbid"` and explicit `model_rebuild()`); enforced strict verification of checkpoint IDs against pending cards; rejected non-null `modified_inputs` (no editable fields per spec); and persisted state mutations directly through `save_checkpoint` with structured `RemediationAction` and `ErrorRecord` logs.
+**Reason:** Strictly fulfills `AGENT_MASTER_PLAN.md` Section 7, Section 8, Section 10 Step 14, and `INTERFACE_OBSERVABILITY_SYSTEM.md` Section 5. Virtual production supervisors require instantaneous, deterministic Approve/Deny and Stop controls during high-burn live camera takes. Permitting ad-hoc input edits or unverified checkpoint resumptions would violate the zero-hallucination trust model and introduce race conditions into ICVFX cluster synchronization.
+**Impact:** Provides an airtight, durable HTTP control plane connecting the frontend operations console with the ADK Workflow Runtime checkpoint database, ready for typed SSE event streaming integration in Step 15.
+---
+

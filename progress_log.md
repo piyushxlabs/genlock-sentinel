@@ -447,3 +447,33 @@
 - Pass
 ---
 
+---
+## Step 14 — Build Backend API/Server
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented full FastAPI operations endpoints in `backend/src/main.py` per `AGENT_MASTER_PLAN.md` Section 7, Section 8, and Section 10 Step 14:
+  - `GET /health` and `GET /healthz`: Readiness and operational status endpoints reporting active streaming mode (`StreamingMode.SSE`) and Vertex AI configuration.
+  - `GET /`: Service metadata endpoint.
+  - `POST /sessions/{session_id}/events/{event_id}/decision`: Supervisor Approve/Deny graph-resumption endpoint accepting strict Pydantic V2 `DecisionRequest` payload. Enforces checkpoint ID verification against pending HITL cards, rejects non-null `modified_inputs` (no editable fields permitted at this checkpoint), updates `approval_state` and `session_status`, appends structured audit records (`RemediationAction` and `ErrorRecord`), and durably persists updated state to checkpoint storage.
+  - `POST /sessions/{session_id}/stop`: Emergency stop endpoint accepting `StopSessionRequest`. Transitions `session_status` to `"stopped"`, halts approvals, logs audit entries, and checkpoints state as-is before halt completes.
+- Defined strict Pydantic V2 request and response models (`HealthResponse`, `DecisionRequest`, `DecisionResponse`, `StopSessionRequest`, `StopSessionResponse`) with `extra="forbid"` and explicit schema rebuilds.
+- Created comprehensive unit test suite in `backend/tests/unit/test_api_server.py` covering health endpoints, root metadata, payload rejection (422 for malformed/extra fields, 400 for modified inputs or mismatched checkpoint IDs, 404 for missing sessions), valid Approve and Deny decision cycles, and emergency stop handling (11 tests passing 100%).
+
+**Files Created:**
+- `backend/tests/unit/test_api_server.py` — Comprehensive 11-test suite for FastAPI endpoints and error handling.
+
+**Files Modified:**
+- `backend/src/main.py` — Implemented `/healthz`, `/sessions/{session_id}/events/{event_id}/decision`, and `/sessions/{session_id}/stop` endpoints with strict Pydantic V2 schemas and checkpoint persistence.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_api_server.py -v` passed all 11 tests in 3.11s.
+- Full test suite `uv run pytest tests/unit/ -v` passed all 83 tests across all 11 test modules in 131.82s with 100% pass rate.
+- Pass
+---
+
+

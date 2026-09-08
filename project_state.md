@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 13: Implement Safety Guardrails
+- **Last Completed Step:** Step 14: Build Backend API/Server
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -33,6 +33,8 @@
   - Structural prohibition guards and state invariant verifiers in `backend/src/safety/prohibition_guards.py` enforcing all 5 constitutional constraints (unauthorized HITL action rejection, prompt injection neutralization, sensitive credential protection in state and cards, ambiguous diagnosis rejection, and out-of-scope non-capability refusal)
   - Model Armor screening hooks wired into `backend/src/tools/mcp_clients/grafana_mcp_client.py` across all telemetry responses with mock security fixtures
   - Comprehensive negative unit test suite in `backend/tests/unit/test_safety_guardrails.py` (20 tests)
-  - 72 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, and safety guardrails
-- **Pending Next Step:** Step 14: Build Backend API/Server
+  - Full FastAPI operations endpoints in `backend/src/main.py` (`/health`, `/healthz`, `/`, `/sessions/{session_id}/events/{event_id}/decision`, and `/sessions/{session_id}/stop`) with strict Pydantic V2 models, checkpoint verification, and structured audit logs
+  - Comprehensive API test suite in `backend/tests/unit/test_api_server.py` (11 tests)
+  - 83 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, safety guardrails, and API server endpoints
+- **Pending Next Step:** Step 15: Implement Typed Streaming Layer
 - **Known Issues / Blockers:** None

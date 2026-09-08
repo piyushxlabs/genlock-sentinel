@@ -1,53 +1,51 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 13 COMPLETION CHECKLIST
-# Implement Safety Guardrails
+# STEP 14 COMPLETION CHECKLIST
+# Build Backend API/Server
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify that all safety guardrails and Model Armor client files exist:
+[ ] Verify that the FastAPI main application exists and has the endpoints:
     ```powershell
-    Get-ChildItem -Path "backend\src\safety"
+    Get-Content "backend\src\main.py" | Select-String "submit_decision", "stop_session", "healthz"
     ```
-    Expected: `__init__.py`, `model_armor_client.py`, and `prohibition_guards.py` appear in the output.
+    Expected: Matches for `submit_decision`, `stop_session`, and `healthz` appear in the output.
 
-[ ] Verify that the negative test suite exists:
+[ ] Verify that the API test suite exists:
     ```powershell
-    Test-Path "backend\tests\unit\test_safety_guardrails.py"
+    Test-Path "backend\tests\unit\test_api_server.py"
     ```
     Expected: `True`
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Run the safety guardrails unit test suite:
+[ ] Run the FastAPI API unit test suite:
     ```powershell
     cd backend
-    uv run pytest tests/unit/test_safety_guardrails.py -v
+    uv run pytest tests/unit/test_api_server.py -v
     ```
-    Expected: All 20 negative tests pass with 100% pass rate in < 2 seconds.
+    Expected: All 11 tests pass with 100% pass rate in < 5 seconds.
     If wrong: Ensure `backend/.venv` is active and dependencies are synced via `uv sync`.
 
 [ ] Run the full unit test suite across all project components:
     ```powershell
     uv run pytest tests/unit/ -v
     ```
-    Expected: All 72 unit tests pass across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, and safety guardrails.
-    If wrong: Check `tests/unit/test_safety_guardrails.py` or MCP client mocking.
+    Expected: All 83 unit tests pass across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, safety guardrails, and API server.
+    If wrong: Check `tests/unit/test_api_server.py` or database checkpointing paths.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/src/safety/model_armor_client.py` — Google Model Armor client with strict Pydantic V2 schemas (`SanitizationFinding`, `SanitizationResult`) and offline rule-based regex detection for prompt injection (OWASP LLM01) and credential disclosure (OWASP LLM02).
-[ ] File: `backend/src/safety/prohibition_guards.py` — Structural prohibition guards, non-capability refusal validators (`validate_in_scope_request`), and state invariant verifiers (`validate_tool_dispatch_preconditions`, `screen_state_for_sensitive_leakage`, `screen_hitl_card_for_sensitive_leakage`).
-[ ] File: `backend/src/safety/__init__.py` — Clean exports of safety models, clients, and guard functions.
-[ ] File: `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Wired Model Armor response screening across all telemetry tools (`query_loki_logs`, `find_slow_requests`, `get_trace_by_id`) and added mock security telemetry fixtures.
-[ ] File: `backend/tests/unit/test_safety_guardrails.py` — Comprehensive 20-test negative unit test suite verifying all 5 constitutional safety constraints.
-[ ] Feature: OWASP LLM01 Prompt Injection Sanitization — Untrusted telemetry containing malicious directives (e.g. `ignore previous instructions`, `execute halt_live_take`) is automatically neutralized and quarantined to `[MODEL_ARMOR_REDACTED:<RULE>]`.
-[ ] Feature: OWASP LLM02 Sensitive Credential Leakage Prevention — Raw API keys and tokens (`glsa_`, `sk-lf-`, Bearer tokens, private keys) are rejected from `GenlockSentinelState` via `screen_state_for_sensitive_leakage` and purged from draft HITL cards via `screen_hitl_card_for_sensitive_leakage`.
-[ ] Feature: Constitutional Non-Capability Refusal — Unconstitutional requests (creative generation, general k8s administration, cast/crew messaging, post-production editing) are structurally rejected by `validate_in_scope_request`.
-[ ] Feature: Precondition Invariant Enforcement — Reversible remediation tools reject ambiguous or low-confidence diagnoses; HITL-gated tools reject unauthorized execution without verified `approval_state == "approved"`.
+[ ] Endpoint: `GET /health` and `GET /healthz` — Readiness endpoints returning `HealthResponse` with `streaming_mode="SSE"`.
+[ ] Endpoint: `GET /` — Root metadata endpoint returning service identification and status.
+[ ] Endpoint: `POST /sessions/{session_id}/events/{event_id}/decision` — Supervisor graph-resumption endpoint accepting strict `DecisionRequest` payload ("approve" or "deny"), enforcing checkpoint ID verification, rejecting modified inputs, updating state, recording audit logs, and persisting to checkpoint storage.
+[ ] Endpoint: `POST /sessions/{session_id}/stop` — Supervisor emergency stop endpoint accepting `StopSessionRequest`, halting active session, transitioning status to "stopped", and checkpointing state as-is.
+[ ] Models: `DecisionRequest`, `DecisionResponse`, `StopSessionRequest`, `StopSessionResponse`, `HealthResponse` with strict Pydantic V2 schema validation (`extra="forbid"`).
+[ ] File: `backend/src/main.py` — Updated FastAPI application with full operations endpoints and checkpoint persistence.
+[ ] File: `backend/tests/unit/test_api_server.py` — 11-test comprehensive unit and integration suite.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -55,32 +53,32 @@
 
 Test 1 — Files Exist:
 ```powershell
-Get-ChildItem -Path "backend\src\safety", "backend\tests\unit\test_safety_guardrails.py"
+Test-Path "backend\src\main.py", "backend\tests\unit\test_api_server.py"
 ```
-✅ Expected: `__init__.py`, `model_armor_client.py`, `prohibition_guards.py`, and `test_safety_guardrails.py` all exist.
-❌ If missing: Re-generate missing files from Step 13.
+✅ Expected: `True`, `True`
+❌ If missing: Re-generate missing files from Step 14.
 
 Test 2 — Environment / Dependencies:
 ```powershell
 cd backend
-uv run python -c "import src.safety; print('Safety package loaded successfully')"
+uv run python -c "from src.main import app; print('FastAPI app loaded successfully')"
 ```
-✅ Expected: `Safety package loaded successfully`
+✅ Expected: `FastAPI app loaded successfully`
 ❌ If errors: Run `uv sync` in `backend/`.
 
-Test 3 — Safety Guardrail Negative Tests:
+Test 3 — API Server Test Suite:
 ```powershell
-uv run pytest tests/unit/test_safety_guardrails.py -v
+uv run pytest tests/unit/test_api_server.py -v
 ```
-✅ Expected: 20 passed in < 2 seconds.
-❌ If errors: Verify Pydantic V2 schemas and regex patterns in `backend/src/safety/`.
+✅ Expected: 11 passed in < 5 seconds.
+❌ If errors: Verify endpoint route parameters and Pydantic schemas in `backend/src/main.py`.
 
 Test 4 — Full Test Suite Regression:
 ```powershell
 uv run pytest tests/unit/ -v
 ```
-✅ Expected: 72 passed, 0 failed across all unit test modules.
-❌ If errors: Check individual test file output for regression.
+✅ Expected: 83 passed, 0 failed across all 11 test modules.
+❌ If errors: Check individual test failure logs.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore
@@ -97,11 +95,11 @@ Test 5 — Security Check:
 
 ```powershell
 git add .
-git commit -m "Step 13: Implement Safety Guardrails — Model Armor, prohibition guards, MCP client screening, and negative test suite"
+git commit -m "Step 14: Build Backend API/Server — FastAPI decision, stop, and health endpoints with checkpoint persistence"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 14 until:
+✋ DO NOT proceed to Step 15 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully
