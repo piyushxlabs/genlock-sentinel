@@ -411,3 +411,39 @@
 - Full unit test suite `uv run pytest tests/unit/ -v` passed all 52 tests in 131.27s with 100% pass rate.
 - Pass
 ---
+
+---
+## Step 13 — Implement Safety Guardrails
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented Google Model Armor security client `backend/src/safety/model_armor_client.py` with strict Pydantic V2 schemas (`SanitizationFinding`, `SanitizationResult`) and offline rule-based detection for prompt injection (OWASP LLM01: `ignore_instructions`, `system_prompt_override`, `developer_mode_jailbreak`, `admin_override`, `force_approval_command`, `malicious_execution_directive`) and sensitive credential leakage (OWASP LLM02: `glsa_` Grafana tokens, `[ps]k-lf-` Langfuse keys, HTTP Bearer tokens, RSA private keys, URI database passwords).
+- Implemented structural prohibition guards and state invariant verifiers in `backend/src/safety/prohibition_guards.py` enforcing the 5 constitutional constraints:
+  - Constraint 1: Structural prohibition of unauthorized HITL actions (Tools 7–9: `halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover`) requiring `approval_state == "approved"` and matching pending card ID.
+  - Constraint 2: Untrusted telemetry screening quarantining and redacting prompt injection attacks to `[MODEL_ARMOR_REDACTED:<RULE>]`.
+  - Constraint 3: Sensitive infrastructure and credential protection rejecting credentials from `GenlockSentinelState` via `screen_state_for_sensitive_leakage` (raises `StateValidationError`) and purging secrets from draft HITL cards via `screen_hitl_card_for_sensitive_leakage`.
+  - Constraint 4: Structural rejection of autonomous remediation (Tools 4–6: `failover_cluster_leadership`, `deprioritize_texture_streaming`, `force_genlock_resync`) when latest diagnosis is ambiguous (`category == "ambiguous"`), below confidence floor, or category-mismatched.
+  - Constraint 5: Structural refusal of out-of-scope non-capabilities (`validate_in_scope_request` refusing creative generation, general k8s administration, cast/crew messaging, and post-production video editing).
+- Wired Model Armor screening hooks directly into `backend/src/tools/mcp_clients/grafana_mcp_client.py`, sanitizing all Loki log and Tempo trace responses before Gemini ingestion and adding mock security fixtures (`malicious-injection` and `credential-leak`).
+- Exported all models, guards, and helper functions cleanly from `backend/src/safety/__init__.py`.
+- Created comprehensive negative unit test suite in `backend/tests/unit/test_safety_guardrails.py` with 20 tests verifying all 5 constitutional constraints and session lifecycle guards (20 tests passing 100%).
+
+**Files Created:**
+- `backend/src/safety/model_armor_client.py` — Google Model Armor client with offline rule-based regex detection and recursive tool payload sanitization.
+- `backend/src/safety/prohibition_guards.py` — Structural prohibition guards, non-capability refusal validators, and state invariant verifiers.
+- `backend/src/safety/__init__.py` — Clean exports of safety models, clients, and guard functions.
+- `backend/tests/unit/test_safety_guardrails.py` — 20-test comprehensive negative unit test suite.
+
+**Files Modified:**
+- `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Wired Model Armor tool response screening across `query_loki_logs`, `find_slow_requests`, and `get_trace_by_id`, and added mock security telemetry fixtures.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_safety_guardrails.py -v` passed all 20 negative tests.
+- Full test suite `uv run pytest tests/unit/ -v` passed all 72 tests across all modules in 130.84s with 100% pass rate.
+- Pass
+---
+

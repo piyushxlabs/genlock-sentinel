@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 12: Implement Reasoning Loop
+- **Last Completed Step:** Step 13: Implement Safety Guardrails
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -29,6 +29,10 @@
   - Individual node handlers implemented in `backend/src/agents/` enforcing the Node-Tool Access Matrix: Node 1 Stream Watch (non-LLM), Node 2 Evidence Triage (Gemini 3.7 Flash + Tools 1–3), Node 3 Root-Cause Correlation (Gemini 3.1 Pro + `ctx.route` decision edge + circuit breaker), Node 4 Autonomous Dispatch (deterministic Tools 4–6), Node 5 HITL Card Generation (Gemini 3.7 Flash `HITLCardPackage`), Node 6 HITL Pause (`hitl_supervisor_approval` interrupt), and Node 7 Post-Approval Handling (deterministic Tools 7–9)
   - Schema sanitization in `backend/src/agents/model_config.py` removing `additionalProperties` for Vertex AI Protobuf compatibility
   - Multi-step reasoning loop coordinator in `backend/src/agents/reasoning_loop.py` enforcing strict 1-pass cycle caps per `event_id`, silence-over-guessing telemetry gap policies, prompt injection screening (OWASP LLM01), and circuit-breaker forced HITL escalation
-  - 52 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, and reasoning loop coordinator
-- **Pending Next Step:** Step 13: Implement Safety Guardrails
+  - Google Model Armor client in `backend/src/safety/model_armor_client.py` with strict Pydantic V2 schemas and offline rule-based detection for prompt injection (OWASP LLM01) and credential disclosure (OWASP LLM02)
+  - Structural prohibition guards and state invariant verifiers in `backend/src/safety/prohibition_guards.py` enforcing all 5 constitutional constraints (unauthorized HITL action rejection, prompt injection neutralization, sensitive credential protection in state and cards, ambiguous diagnosis rejection, and out-of-scope non-capability refusal)
+  - Model Armor screening hooks wired into `backend/src/tools/mcp_clients/grafana_mcp_client.py` across all telemetry responses with mock security fixtures
+  - Comprehensive negative unit test suite in `backend/tests/unit/test_safety_guardrails.py` (20 tests)
+  - 72 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, and safety guardrails
+- **Pending Next Step:** Step 14: Build Backend API/Server
 - **Known Issues / Blockers:** None
