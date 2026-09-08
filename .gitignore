@@ -59,3 +59,9 @@ pnpm-debug.log*
 *.swo
 .DS_Store
 Thumbs.db
+
+
+# GCP Service Account Keys
+*.json
+gcp-key.json
+backend/gcp-key.json
