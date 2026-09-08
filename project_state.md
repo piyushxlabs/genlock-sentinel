@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 9: Confirm No Long-Term Memory
+- **Last Completed Step:** Step 10: Register Tools
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -22,6 +22,9 @@
   - Deterministic state reducers and mutation dispatcher in `backend/src/state/reducers.py` (`immutable-after-init`, `merge-by-key`, `append-only`, `last-write-wins`)
   - Durable session state checkpointing backend in `backend/src/state/checkpointing.py` via ADK's `DatabaseSessionService` (supporting Cloud SQL `postgresql+asyncpg` and local SQLite `sqlite+aiosqlite`)
   - Constitutional confirmation and negative audit tests in `backend/tests/unit/test_no_long_term_memory.py` verifying zero vector databases, zero external memory frameworks, and strictly session-scoped state
-  - 31 unit tests passing 100% across all unit test suites
-- **Pending Next Step:** Step 10: Register Tools
+  - Strict Pydantic V2 and MCP JSON schemas for all 9 agent tools in `backend/src/tools/schemas/`
+  - Async Grafana & Tempo MCP client in `backend/src/tools/mcp_clients/grafana_mcp_client.py` with exponential backoff (1s, 2s, 4s), input sanitization, and Section 9.1 mock fallbacks
+  - All 9 agent tools implemented across the Node-Tool Access Matrix: Tools 1–3 (Evidence Triage), Tools 4–6 (Autonomous Remediation), and Tools 7–9 (Post-Approval Handling) with strict code-level precondition enforcement
+  - 39 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, and all 9 tools
+- **Pending Next Step:** Step 11: Wire Orchestration Graph
 - **Known Issues / Blockers:** None

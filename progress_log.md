@@ -303,3 +303,37 @@
 - Full unit test suite `uv run pytest tests/unit/ -v` passed all 31 tests in 10.40s with 100% pass rate.
 - Pass
 ---
+## Step 10 — Register Tools
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented strict Pydantic V2 Input/Output models in `backend/src/tools/schemas/pydantic_models.py` with `model_config = ConfigDict(strict=True, extra="forbid")` for all 9 agent tools.
+- Implemented strict MCP JSON Schema definitions in `backend/src/tools/schemas/mcp_schemas.py` for all 9 tools conforming to Model Context Protocol standards.
+- Implemented async Grafana & Tempo MCP client in `backend/src/tools/mcp_clients/grafana_mcp_client.py` supporting live HTTP querying, exponential backoff (1s, 2s, 4s; max 3 retries), LogQL input sanitization (`sanitize_logql`), and grounded Section 9.1 mock fallbacks.
+- Implemented Evidence Triage tools in `backend/src/tools/evidence_triage_tools.py` (Tools 1–3: `query_loki_logs`, `find_slow_requests`, `get_trace_by_id`) with active `DriftEvent` preconditions and silence-over-guessing error handling.
+- Implemented Autonomous Remediation tools in `backend/src/tools/autonomous_remediation_tools.py` (Tools 4–6: `failover_cluster_leadership`, `deprioritize_texture_streaming`, `force_genlock_resync`) with strict category matching and confidence floor precondition enforcement.
+- Implemented Post-Approval Handling tools in `backend/src/tools/post_approval_tools.py` (Tools 7–9: `halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover`) with programmatic `approval_state == "approved"` and proposed action matching preconditions.
+- Exported all 9 tools, Pydantic models, MCP schemas, and client utilities from `backend/src/tools/__init__.py`.
+- Built comprehensive unit test suite in `backend/tests/unit/test_tools.py` (8 tests passing 100%).
+
+**Files Created:**
+- `backend/src/tools/schemas/pydantic_models.py` — Pydantic V2 input/output models with extra="forbid" for all 9 tools.
+- `backend/src/tools/schemas/mcp_schemas.py` — MCP JSON tool schemas for all 9 tools.
+- `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Async Grafana and Tempo MCP client with backoff and mock fallbacks.
+- `backend/src/tools/evidence_triage_tools.py` — Tools 1 to 3 (query_loki_logs, find_slow_requests, get_trace_by_id).
+- `backend/src/tools/autonomous_remediation_tools.py` — Tools 4 to 6 (failover_cluster_leadership, deprioritize_texture_streaming, force_genlock_resync).
+- `backend/src/tools/post_approval_tools.py` — Tools 7 to 9 (halt_live_take, fallback_to_greenscreen, execute_threshold_exceeding_failover).
+- `backend/tests/unit/test_tools.py` — Comprehensive unit test suite for all 9 tools and schema validations.
+
+**Files Modified:**
+- `backend/src/tools/__init__.py` — Exported all tools, schemas, and client factories.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_tools.py -v` passed all 8 tests in 1.80s.
+- Full unit test suite `uv run pytest tests/unit/ -v` passed all 39 tests in 10.87s with 100% pass rate.
+- Pass
+---

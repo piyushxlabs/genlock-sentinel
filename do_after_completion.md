@@ -1,45 +1,54 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 9 COMPLETION CHECKLIST
-# Step 9: Confirm No Long-Term Memory
+# STEP 10 COMPLETION CHECKLIST
+# Step 10: Register Tools
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Run negative audit unit tests for long-term memory absence:
+[ ] Run tool registration and verification test suite:
     ```
-    cd backend && uv run pytest tests/unit/test_no_long_term_memory.py -v && cd ..
+    cd backend && uv run pytest tests/unit/test_tools.py -v && cd ..
     ```
-    Expected: 3 passed in <1s.
+    Expected: 8 passed in <3s.
 
-[ ] Run full backend unit test suite:
+[ ] Run the full backend test suite:
     ```
     cd backend && uv run pytest tests/unit/ -v && cd ..
     ```
-    Expected: 31 passed in <11s.
+    Expected: 39 passed in <12s.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Run manual grep check for vector store packages in pyproject.toml:
+[ ] Verify strict schema enforcement on all 9 tools:
     ```
-    git grep -iE "(chromadb|pinecone|qdrant|weaviate|faiss|pgvector|milvus|langchain|crewai|llama_index)" backend/pyproject.toml
+    cd backend && uv run python -c "from src.tools.schemas.pydantic_models import TOOL_INPUT_MODELS, TOOL_OUTPUT_MODELS; assert len(TOOL_INPUT_MODELS) == 9 and len(TOOL_OUTPUT_MODELS) == 9; print('All 9 dual Pydantic V2 tool models verified')" && cd ..
     ```
-    Expected: No matches (empty output).
+    Expected: `All 9 dual Pydantic V2 tool models verified`
+    If wrong: Check `backend/src/tools/schemas/pydantic_models.py`.
 
-[ ] Run manual grep check across source code tree:
+[ ] Verify MCP JSON Schema definitions:
     ```
-    git grep -iE "(chromadb|pinecone|qdrant|weaviate|faiss|milvus|langchain|crewai|llama_index)" backend/src/
+    cd backend && uv run python -c "from src.tools.schemas.mcp_schemas import ALL_MCP_TOOL_SCHEMAS; assert len(ALL_MCP_TOOL_SCHEMAS) == 9; print('All 9 MCP schemas verified')" && cd ..
     ```
-    Expected: No matches (empty output).
+    Expected: `All 9 MCP schemas verified`
+    If wrong: Check `backend/src/tools/schemas/mcp_schemas.py`.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/tests/unit/test_no_long_term_memory.py` — Automated negative audit test suite verifying absence of vector databases, long-term memory frameworks, and third-party orchestrators.
-[ ] Verification: `backend/pyproject.toml` confirmed free of unauthorized memory dependencies.
-[ ] Verification: `backend/src/` confirmed free of unauthorized vector store clients and imports.
-[ ] Verification: `GenlockSentinelState` confirmed strictly session-scoped with zero cross-session memory fields.
+[ ] File: `backend/src/tools/schemas/pydantic_models.py` — Strict Pydantic V2 Input/Output models with `extra="forbid"` for all 9 tools across the Node-Tool Access Matrix.
+[ ] File: `backend/src/tools/schemas/mcp_schemas.py` — Strict Model Context Protocol (MCP) JSON schemas with `additionalProperties: False` for all 9 tools.
+[ ] File: `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Async Grafana and Tempo MCP client with exponential backoff (1s, 2s, 4s), LogQL query sanitization, and grounded Section 9.1 mock fallbacks.
+[ ] File: `backend/src/tools/evidence_triage_tools.py` — Read-only Evidence Triage tools (Tools 1–3: `query_loki_logs`, `find_slow_requests`, `get_trace_by_id`) with active drift preconditions and silence-over-guessing policy.
+[ ] File: `backend/src/tools/autonomous_remediation_tools.py` — Deterministic Autonomous Remediation tools (Tools 4–6: `failover_cluster_leadership`, `deprioritize_texture_streaming`, `force_genlock_resync`) with category matching and confidence floor enforcement.
+[ ] File: `backend/src/tools/post_approval_tools.py` — Deterministic Post-Approval Handling tools (Tools 7–9: `halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover`) with programmatic approval and action verification.
+[ ] File: `backend/src/tools/__init__.py` — Clean exports for all 9 tools, Pydantic schemas, MCP schemas, and client factories.
+[ ] File: `backend/tests/unit/test_tools.py` — Comprehensive unit test suite covering tool dispatch, precondition violations, schema validation, backoff, and mock fallbacks.
+[ ] Feature: Node-Tool Access Matrix enforcement preventing cognitive nodes from holding actuation tools.
+[ ] Config: MCP and telemetry endpoints with retry configurations in `backend/.env`.
+[ ] Package: None (all dependencies previously installed).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -47,32 +56,32 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Get-Item backend/tests/unit/test_no_long_term_memory.py"
+powershell -Command "Get-ChildItem -Path backend/src/tools -Recurse | Select-Object -ExpandProperty FullName"
 ```
-✅ Expected: File exists.
-❌ If missing: Recreate missing file.
+✅ Expected: `schemas/pydantic_models.py`, `schemas/mcp_schemas.py`, `mcp_clients/grafana_mcp_client.py`, `evidence_triage_tools.py`, `autonomous_remediation_tools.py`, `post_approval_tools.py`, `__init__.py`.
+❌ If missing: Check repository structure.
 
 Test 2 — Environment / Dependencies:
 ```
-cd backend && uv run python -c "from src.state import GenlockSentinelState; assert 'embedding' not in str(GenlockSentinelState.model_fields); print('Session-scoped state verified without vector fields')" && cd ..
+cd backend && uv run python -c "from src.tools import ALL_TOOLS; print(f'Registered tools count: {len(ALL_TOOLS)}')" && cd ..
 ```
-✅ Expected: `Session-scoped state verified without vector fields`
-❌ If errors: Inspect `backend/src/state/schema.py`.
+✅ Expected: `Registered tools count: 9`
+❌ If errors: Check imports in `backend/src/tools/__init__.py`.
 
 Test 3 — Server or Process Start:
 ```
-cd backend && uv run python -c "from src.main import app; print('Server ready with verified memory architecture')" && cd ..
+cd backend && uv run python -c "from src.main import app; from src.tools import ALL_TOOLS; print('Server ready and all 9 tools validated')" && cd ..
 ```
-✅ Expected: `Server ready with verified memory architecture`
-❌ If errors: Check imports in `src/main.py`.
+✅ Expected: `Server ready and all 9 tools validated`
+❌ If errors: Check tool dependencies and imports.
 
 Test 4 — Functional Check:
-Run the complete Step 9 test suite:
+Run the unit test suite for Step 10:
 ```
-cd backend && uv run pytest tests/unit/test_no_long_term_memory.py -v && cd ..
+cd backend && uv run pytest tests/unit/test_tools.py -v && cd ..
 ```
-✅ Expected: All 3 tests PASSED.
-❌ If wrong: Inspect failed test in pytest output.
+✅ Expected: 8 passed in <3s.
+❌ If wrong: Review failed tests in `test_tools.py`.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore:
@@ -89,11 +98,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 9: Confirm No Long-Term Memory — Negative audit tests verifying exclusion of vector stores and cross-session memory"
+git commit -m "Step 10: Register Tools — All 9 tools, dual Pydantic/MCP schemas, Grafana MCP client with backoff, and unit tests"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 10 until:
+✋ DO NOT proceed to Step 11 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

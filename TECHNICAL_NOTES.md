@@ -58,3 +58,10 @@ Step 4 — No deviations from spec.
 **Reason:** Fulfills `AGENT_MASTER_PLAN.md` Section 1 (Explicit Non-Goals), Section 4 Step 5, Section 10 Step 9, and `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 7. Genlock Sentinel is an SRE cluster integrity agent operating on real-time deterministic metrics, logs, and traces. The three root causes are fixed deterministic categories, not retrieved documents. Adding vector storage would introduce unwarranted architectural bloat, token latency, and potential hallucination vectors.
 **Impact:** Guarantees an air-gapped, lean, deterministic agent runtime with zero cross-session state contamination or credential leakage.
 ---
+
+---
+## Step 10 — Tool Registration Across Node-Tool Access Matrix
+**Decision:** Implemented dual-schema bindings (Pydantic V2 models with `model_config = ConfigDict(strict=True, extra="forbid")` and strict MCP JSON schemas with `additionalProperties: False`) for all 9 agent tools. Bound Tools 1–3 to Evidence Triage with active drift event preconditions and silence-over-guessing error handling; bound Tools 4–6 to Autonomous Remediation with code-level diagnosis category and confidence floor verification; bound Tools 7–9 to Post-Approval Handling with mandatory `approval_state == "approved"` and matching proposed action verification.
+**Reason:** Strictly implements `node-tool-access-matrix-restrictions.md`, `state-invariants-and-tool-preconditions.md`, `code-level-verification-over-model-discretion.md`, and `defensive-execution-structured-outputs-and-fallbacks.md`. Prevents cognitive nodes from holding actuation tools, blocks unauthorized state transitions before dispatch, and prevents hallucinated log or trace fabrications upon query failure.
+**Impact:** Ensures all tools adhere to zero-trust structural boundaries and guarantees deterministic dispatch safety during graph execution in Step 11 and Step 12.
+---
