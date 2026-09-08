@@ -337,3 +337,46 @@
 - Full unit test suite `uv run pytest tests/unit/ -v` passed all 39 tests in 10.87s with 100% pass rate.
 - Pass
 ---
+
+---
+## Step 11 — Wire Orchestration Graph
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented the 7-node ADK Workflow Runtime graph topology in `backend/src/agents/graph.py` matching `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 4 and `AGENT_LOGIC_SPEC.md` Section 6.
+- Implemented Node 1 `stream_watch_node` in `backend/src/agents/stream_watch.py` (non-LLM vsync telemetry breach detection, instantiating `DriftEvent` and updating `active_drift_events`).
+- Implemented Node 2 `evidence_triage_node` in `backend/src/agents/evidence_triage.py` (Gemini 3.7 Flash observability queries via Tools 1–3, synthesizing `EvidenceBundleExtraction`).
+- Implemented Node 3 `root_cause_correlation_node` in `backend/src/agents/root_cause_correlation.py` (Gemini 3.1 Pro at `temperature=0.0`, code-level grounding verification, rolling circuit breaker check, and deterministic `ctx.route` decision edge routing to "autonomous" vs "hitl").
+- Implemented Node 4 `autonomous_dispatch_node` in `backend/src/agents/autonomous_dispatch.py` (deterministic dispatch of Tools 4–6: `failover_cluster_leadership`, `deprioritize_texture_streaming`, `force_genlock_resync` with strict category matching and confidence floor preconditions).
+- Implemented Node 5 `hitl_card_generation_node` in `backend/src/agents/hitl_card_generation.py` (Gemini 3.7 Flash `HITLCardPackage` synthesis and `pending_hitl_card` state reduction).
+- Implemented Node 6 `hitl_pause_node` checkpoint in `backend/src/agents/graph.py` yielding durable interrupt `Event(long_running_tool_ids=["hitl_supervisor_approval"])`.
+- Implemented Node 7 `post_approval_handling_node` in `backend/src/agents/post_approval_handling.py` (deterministic post-approval handling of Tools 7–9: `halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover` upon supervisor approval, or graceful denial audit).
+- Implemented `_clean_schema_for_gemini` in `backend/src/agents/model_config.py` to recursively strip `additionalProperties` and `title` from Pydantic schemas for Vertex AI protobuf compatibility.
+- Implemented `get_or_init_state` helper in `backend/src/state/schema.py` and exported from `backend/src/state/__init__.py` for robust state reconstruction.
+- Implemented comprehensive unit test suite in `backend/tests/unit/test_graph.py` covering topology validation, node unit handlers, decision edge routing, circuit breaker, pause interrupt, approval/denial execution, and end-to-end Runner execution (8 tests passing 100%).
+
+**Files Created:**
+- `backend/src/agents/stream_watch.py` — Node 1 non-LLM telemetry breach evaluator.
+- `backend/src/agents/evidence_triage.py` — Node 2 Gemini 3.7 Flash observability triage node.
+- `backend/src/agents/root_cause_correlation.py` — Node 3 Gemini 3.1 Pro root-cause correlation node with `ctx.route` decision edge and circuit breaker.
+- `backend/src/agents/autonomous_dispatch.py` — Node 4 deterministic reversible remediation dispatcher.
+- `backend/src/agents/hitl_card_generation.py` — Node 5 Gemini 3.7 Flash HITL card generation node.
+- `backend/src/agents/post_approval_handling.py` — Node 7 deterministic HITL-gated action handler.
+- `backend/src/agents/graph.py` — Complete 7-Node ADK Workflow Runtime graph definition and edge wiring.
+- `backend/tests/unit/test_graph.py` — 8-test unit suite verifying the full orchestration graph.
+
+**Files Modified:**
+- `backend/src/agents/model_config.py` — Added `_clean_schema_for_gemini` schema sanitization and fallback handling.
+- `backend/src/agents/__init__.py` — Clean exports of all 7 nodes, workflow factory, and graph utilities.
+- `backend/src/state/schema.py` — Added `get_or_init_state` session extraction helper.
+- `backend/src/state/__init__.py` — Exported `get_or_init_state`.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_graph.py -v` passed all 8 tests.
+- Full unit test suite `uv run pytest tests/unit/ -v` passed all 47 tests in 58.63s with 100% pass rate.
+- Pass
+---

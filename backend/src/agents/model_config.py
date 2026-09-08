@@ -167,6 +167,28 @@ MOCK_STRUCTURED_RESPONSES: Dict[str, Dict[str, Any]] = {
 
 
 # ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# Schema Sanitization for Vertex AI / Protobuf Compatibility
+# ------------------------------------------------------------------------------
+
+def _clean_schema_for_gemini(schema: Any) -> Any:
+    """Recursively removes fields unsupported by Gemini API / Vertex AI Schema Protobuf.
+
+    Specifically removes 'additionalProperties' and 'title'.
+    """
+    if isinstance(schema, dict):
+        cleaned = {}
+        for k, v in schema.items():
+            if k in ("additionalProperties", "title"):
+                continue
+            cleaned[k] = _clean_schema_for_gemini(v)
+        return cleaned
+    elif isinstance(schema, list):
+        return [_clean_schema_for_gemini(item) for item in schema]
+    return schema
+
+
+# ------------------------------------------------------------------------------
 # Structured Output Invocation with Defensive Backoff
 # ------------------------------------------------------------------------------
 
@@ -183,13 +205,15 @@ async def generate_structured_output(
     defensive-execution-structured-outputs-and-fallbacks.md.
     """
     settings = get_model_settings(role)
-    client = None if force_mock else get_genai_client()
+    use_mock = force_mock or (os.environ.get("GENLOCK_SENTINEL_FORCE_MOCK", "").lower() in ("true", "1"))
+    client = None if use_mock else get_genai_client()
 
     if client is not None:
+        clean_schema = _clean_schema_for_gemini(schema_cls.model_json_schema())
         config = types.GenerateContentConfig(
             temperature=settings.temperature,
             response_mime_type="application/json",
-            response_schema=schema_cls,
+            response_schema=clean_schema,
             system_instruction=settings.system_instruction,
         )
 

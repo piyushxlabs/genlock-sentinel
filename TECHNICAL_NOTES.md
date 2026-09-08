@@ -65,3 +65,10 @@ Step 4 — No deviations from spec.
 **Reason:** Strictly implements `node-tool-access-matrix-restrictions.md`, `state-invariants-and-tool-preconditions.md`, `code-level-verification-over-model-discretion.md`, and `defensive-execution-structured-outputs-and-fallbacks.md`. Prevents cognitive nodes from holding actuation tools, blocks unauthorized state transitions before dispatch, and prevents hallucinated log or trace fabrications upon query failure.
 **Impact:** Ensures all tools adhere to zero-trust structural boundaries and guarantees deterministic dispatch safety during graph execution in Step 11 and Step 12.
 ---
+
+---
+## Step 11 — 7-Node ADK 2.x Workflow Graph, Vertex AI Protobuf Schema Sanitization & Context Isolation
+**Decision:** Built the 7-node ADK Workflow Runtime graph in `backend/src/agents/graph.py` using `google.adk.workflow.Workflow`, `FunctionNode`, and `Edge` with `from_node=START`; implemented dynamic decision edge routing via `ctx.route = "autonomous"` vs `ctx.route = "hitl"`; implemented Node 6 pause via `Event(long_running_tool_ids=["hitl_supervisor_approval"])`; added `_clean_schema_for_gemini` in `backend/src/agents/model_config.py` to sanitize Pydantic V2 schemas for Vertex AI REST Protobuf endpoints; and created `_create_test_context` utilizing `InvocationContext`.
+**Reason:** Strictly satisfies `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 4 and `node-tool-access-matrix-restrictions.md`. ADK 2.x Workflow requires the initial graph edge to originate from `START`. Vertex AI's REST endpoint rejects Pydantic V2 `extra="forbid"` JSON schema's `additionalProperties: False` with `400 INVALID_ARGUMENT: Unknown name "additional_properties" at 'generation_config.response_schema'`. Stripping `additionalProperties` and `title` preserves schema structure while satisfying Google GenAI Protobuf constraints.
+**Impact:** Provides a fully executable, strictly isolated 7-node orchestration workflow with deterministic state reductions, circuit-breaker safety, and durable HITL interrupt/resume ready for multi-turn reasoning loops in Step 12.
+---

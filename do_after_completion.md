@@ -1,13 +1,13 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 10 COMPLETION CHECKLIST
-# Step 10: Register Tools
+# STEP 11 COMPLETION CHECKLIST
+# Step 11: Wire Orchestration Graph
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Run tool registration and verification test suite:
+[ ] Run orchestration graph unit test suite:
     ```
-    cd backend && uv run pytest tests/unit/test_tools.py -v && cd ..
+    cd backend && uv run pytest tests/unit/test_graph.py -v && cd ..
     ```
     Expected: 8 passed in <3s.
 
@@ -15,39 +15,40 @@
     ```
     cd backend && uv run pytest tests/unit/ -v && cd ..
     ```
-    Expected: 39 passed in <12s.
+    Expected: 47 passed in <60s.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Verify strict schema enforcement on all 9 tools:
+[ ] Verify 7-node workflow graph topology compiles and contains exact 7 nodes:
     ```
-    cd backend && uv run python -c "from src.tools.schemas.pydantic_models import TOOL_INPUT_MODELS, TOOL_OUTPUT_MODELS; assert len(TOOL_INPUT_MODELS) == 9 and len(TOOL_OUTPUT_MODELS) == 9; print('All 9 dual Pydantic V2 tool models verified')" && cd ..
+    cd backend && uv run python -c "from src.agents.graph import create_genlock_workflow, ALL_GRAPH_NODES; wf = create_genlock_workflow(); assert len(ALL_GRAPH_NODES) == 7; print('7-node workflow graph verified successfully')" && cd ..
     ```
-    Expected: `All 9 dual Pydantic V2 tool models verified`
-    If wrong: Check `backend/src/tools/schemas/pydantic_models.py`.
+    Expected: `7-node workflow graph verified successfully`
+    If wrong: Check `backend/src/agents/graph.py`.
 
-[ ] Verify MCP JSON Schema definitions:
+[ ] Verify Node-Tool Access Matrix boundaries:
     ```
-    cd backend && uv run python -c "from src.tools.schemas.mcp_schemas import ALL_MCP_TOOL_SCHEMAS; assert len(ALL_MCP_TOOL_SCHEMAS) == 9; print('All 9 MCP schemas verified')" && cd ..
+    cd backend && uv run python -c "from src.agents.graph import ALL_GRAPH_NODES; print('All 7 nodes verified:', [n.name for n in ALL_GRAPH_NODES])" && cd ..
     ```
-    Expected: `All 9 MCP schemas verified`
-    If wrong: Check `backend/src/tools/schemas/mcp_schemas.py`.
+    Expected: `All 7 nodes verified: ['node1_stream_watch', 'node2_evidence_triage', 'node3_root_cause_correlation', 'node4_autonomous_dispatch', 'node5_hitl_card_generation', 'node6_hitl_pause', 'node7_post_approval_handling']`
+    If wrong: Check node definitions in `backend/src/agents/`.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/src/tools/schemas/pydantic_models.py` — Strict Pydantic V2 Input/Output models with `extra="forbid"` for all 9 tools across the Node-Tool Access Matrix.
-[ ] File: `backend/src/tools/schemas/mcp_schemas.py` — Strict Model Context Protocol (MCP) JSON schemas with `additionalProperties: False` for all 9 tools.
-[ ] File: `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Async Grafana and Tempo MCP client with exponential backoff (1s, 2s, 4s), LogQL query sanitization, and grounded Section 9.1 mock fallbacks.
-[ ] File: `backend/src/tools/evidence_triage_tools.py` — Read-only Evidence Triage tools (Tools 1–3: `query_loki_logs`, `find_slow_requests`, `get_trace_by_id`) with active drift preconditions and silence-over-guessing policy.
-[ ] File: `backend/src/tools/autonomous_remediation_tools.py` — Deterministic Autonomous Remediation tools (Tools 4–6: `failover_cluster_leadership`, `deprioritize_texture_streaming`, `force_genlock_resync`) with category matching and confidence floor enforcement.
-[ ] File: `backend/src/tools/post_approval_tools.py` — Deterministic Post-Approval Handling tools (Tools 7–9: `halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover`) with programmatic approval and action verification.
-[ ] File: `backend/src/tools/__init__.py` — Clean exports for all 9 tools, Pydantic schemas, MCP schemas, and client factories.
-[ ] File: `backend/tests/unit/test_tools.py` — Comprehensive unit test suite covering tool dispatch, precondition violations, schema validation, backoff, and mock fallbacks.
-[ ] Feature: Node-Tool Access Matrix enforcement preventing cognitive nodes from holding actuation tools.
-[ ] Config: MCP and telemetry endpoints with retry configurations in `backend/.env`.
+[ ] File: `backend/src/agents/stream_watch.py` — Node 1 non-LLM telemetry breach evaluator instantiating `DriftEvent`.
+[ ] File: `backend/src/agents/evidence_triage.py` — Node 2 Gemini 3.7 Flash observability triage querying Tools 1–3 and producing `EvidenceBundleExtraction`.
+[ ] File: `backend/src/agents/root_cause_correlation.py` — Node 3 Gemini 3.1 Pro root-cause correlation node with code grounding, rolling circuit breaker, and deterministic `ctx.route` decision edge routing ("autonomous" vs "hitl").
+[ ] File: `backend/src/agents/autonomous_dispatch.py` — Node 4 deterministic reversible remediation dispatcher (Tools 4–6).
+[ ] File: `backend/src/agents/hitl_card_generation.py` — Node 5 Gemini 3.7 Flash HITL card generation producing `HITLCardPackage`.
+[ ] File: `backend/src/agents/post_approval_handling.py` — Node 7 deterministic HITL-gated action handler (Tools 7–9) and denial audit handler.
+[ ] File: `backend/src/agents/graph.py` — 7-Node ADK Workflow Runtime graph definition, Node 6 HITL pause checkpoint (`hitl_supervisor_approval` interrupt), and compiled edge transitions.
+[ ] File: `backend/src/agents/model_config.py` — Added `_clean_schema_for_gemini` schema sanitization and fallback handling for Vertex AI protobuf compatibility.
+[ ] File: `backend/tests/unit/test_graph.py` — Comprehensive 8-test unit suite validating graph topology, individual nodes, decision edge, circuit breaker, pause interrupt, and end-to-end runner execution.
+[ ] Feature: 7-Node ADK Workflow Runtime graph with conditional branching (`ctx.route = "autonomous"` vs `ctx.route = "hitl"`).
+[ ] Config: Vertex AI schema protobuf sanitization stripping `additionalProperties`.
 [ ] Package: None (all dependencies previously installed).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -56,32 +57,32 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Get-ChildItem -Path backend/src/tools -Recurse | Select-Object -ExpandProperty FullName"
+powershell -Command "Get-ChildItem -Path backend/src/agents -Recurse | Select-Object -ExpandProperty FullName"
 ```
-✅ Expected: `schemas/pydantic_models.py`, `schemas/mcp_schemas.py`, `mcp_clients/grafana_mcp_client.py`, `evidence_triage_tools.py`, `autonomous_remediation_tools.py`, `post_approval_tools.py`, `__init__.py`.
+✅ Expected: `autonomous_dispatch.py`, `evidence_triage.py`, `graph.py`, `hitl_card_generation.py`, `model_config.py`, `post_approval_handling.py`, `root_cause_correlation.py`, `stream_watch.py`, `__init__.py`.
 ❌ If missing: Check repository structure.
 
 Test 2 — Environment / Dependencies:
 ```
-cd backend && uv run python -c "from src.tools import ALL_TOOLS; print(f'Registered tools count: {len(ALL_TOOLS)}')" && cd ..
+cd backend && uv run python -c "from src.agents import ALL_GRAPH_NODES, create_genlock_workflow; print(f'Graph nodes count: {len(ALL_GRAPH_NODES)}')" && cd ..
 ```
-✅ Expected: `Registered tools count: 9`
-❌ If errors: Check imports in `backend/src/tools/__init__.py`.
+✅ Expected: `Graph nodes count: 7`
+❌ If errors: Check imports in `backend/src/agents/__init__.py`.
 
 Test 3 — Server or Process Start:
 ```
-cd backend && uv run python -c "from src.main import app; from src.tools import ALL_TOOLS; print('Server ready and all 9 tools validated')" && cd ..
+cd backend && uv run python -c "from src.main import app; from src.agents import create_genlock_workflow; print('Server ready and 7-node workflow validated')" && cd ..
 ```
-✅ Expected: `Server ready and all 9 tools validated`
-❌ If errors: Check tool dependencies and imports.
+✅ Expected: `Server ready and 7-node workflow validated`
+❌ If errors: Check graph node definitions and imports.
 
 Test 4 — Functional Check:
-Run the unit test suite for Step 10:
+Run the unit test suite for Step 11:
 ```
-cd backend && uv run pytest tests/unit/test_tools.py -v && cd ..
+cd backend && uv run pytest tests/unit/test_graph.py -v && cd ..
 ```
-✅ Expected: 8 passed in <3s.
-❌ If wrong: Review failed tests in `test_tools.py`.
+✅ Expected: 8 passed.
+❌ If wrong: Review failed tests in `test_graph.py`.
 
 Test 5 — Security Check:
 [ ] Verify .env is in .gitignore:
@@ -98,11 +99,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 10: Register Tools — All 9 tools, dual Pydantic/MCP schemas, Grafana MCP client with backoff, and unit tests"
+git commit -m "Step 11: Wire Orchestration Graph — 7-Node ADK Workflow Runtime graph, conditional routing, and test suite"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 11 until:
+✋ DO NOT proceed to Step 12 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

@@ -280,3 +280,20 @@ class GenlockSentinelState(BaseModel):
         if isinstance(v, str):
             return ApprovalStatus(v)
         return v
+
+
+def get_or_init_state(ctx: Any) -> GenlockSentinelState:
+    """Safely extracts and reconstructs GenlockSentinelState from ADK Context or dictionary."""
+    if hasattr(ctx, "state"):
+        raw_state = ctx.state.to_dict() if hasattr(ctx.state, "to_dict") else dict(ctx.state)
+    elif isinstance(ctx, dict):
+        raw_state = ctx
+    else:
+        raw_state = {}
+
+    if "session_id" not in raw_state or not raw_state["session_id"]:
+        session = getattr(ctx, "session", None)
+        raw_state["session_id"] = getattr(session, "id", None) or f"session-{uuid4().hex[:8]}"
+
+    return GenlockSentinelState.model_validate(raw_state)
+

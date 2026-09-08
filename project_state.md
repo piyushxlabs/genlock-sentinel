@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 10: Register Tools
+- **Last Completed Step:** Step 11: Wire Orchestration Graph
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -25,6 +25,9 @@
   - Strict Pydantic V2 and MCP JSON schemas for all 9 agent tools in `backend/src/tools/schemas/`
   - Async Grafana & Tempo MCP client in `backend/src/tools/mcp_clients/grafana_mcp_client.py` with exponential backoff (1s, 2s, 4s), input sanitization, and Section 9.1 mock fallbacks
   - All 9 agent tools implemented across the Node-Tool Access Matrix: Tools 1–3 (Evidence Triage), Tools 4–6 (Autonomous Remediation), and Tools 7–9 (Post-Approval Handling) with strict code-level precondition enforcement
-  - 39 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, and all 9 tools
-- **Pending Next Step:** Step 11: Wire Orchestration Graph
+  - Complete 7-node ADK Workflow Runtime graph compiled in `backend/src/agents/graph.py` matching `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 4
+  - Individual node handlers implemented in `backend/src/agents/` enforcing the Node-Tool Access Matrix: Node 1 Stream Watch (non-LLM), Node 2 Evidence Triage (Gemini 3.7 Flash + Tools 1–3), Node 3 Root-Cause Correlation (Gemini 3.1 Pro + `ctx.route` decision edge + circuit breaker), Node 4 Autonomous Dispatch (deterministic Tools 4–6), Node 5 HITL Card Generation (Gemini 3.7 Flash `HITLCardPackage`), Node 6 HITL Pause (`hitl_supervisor_approval` interrupt), and Node 7 Post-Approval Handling (deterministic Tools 7–9)
+  - Schema sanitization in `backend/src/agents/model_config.py` removing `additionalProperties` for Vertex AI Protobuf compatibility
+  - 47 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, and the complete 7-node orchestration graph
+- **Pending Next Step:** Step 12: Implement Reasoning Loop
 - **Known Issues / Blockers:** None
