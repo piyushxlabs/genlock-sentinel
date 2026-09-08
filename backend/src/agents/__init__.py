@@ -24,6 +24,12 @@ from src.agents.model_config import (
     get_reasoning_model_name,
 )
 from src.agents.post_approval_handling import post_approval_handling_node
+from src.agents.reasoning_loop import (
+    ReasoningLoopResult,
+    reset_reasoning_loop_trackers,
+    run_reasoning_loop,
+    sanitize_telemetry_input,
+)
 from src.agents.root_cause_correlation import (
     check_circuit_breaker,
     root_cause_correlation_node,
@@ -46,6 +52,11 @@ __all__ = [
     "hitl_pause_node",
     "post_approval_handling_node",
     "check_circuit_breaker",
+    # Reasoning Loop
+    "run_reasoning_loop",
+    "ReasoningLoopResult",
+    "reset_reasoning_loop_trackers",
+    "sanitize_telemetry_input",
     # FunctionNodes
     "node1_stream_watch",
     "node2_evidence_triage",

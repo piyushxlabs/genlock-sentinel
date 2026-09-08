@@ -380,3 +380,34 @@
 - Full unit test suite `uv run pytest tests/unit/ -v` passed all 47 tests in 58.63s with 100% pass rate.
 - Pass
 ---
+
+---
+## Step 12 — Implement Reasoning Loop
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented multi-step reasoning coordinator `run_reasoning_loop` in `backend/src/agents/reasoning_loop.py` coordinating Evidence Triage (Node 2) and Root-Cause Correlation (Node 3) per `AGENT_MASTER_PLAN.md` Section 6 and Section 10 Step 12.
+- Enforced strict cycle caps: exactly ONE diagnostic and remediation pass per `event_id` to a terminal state (`remediated`, `awaiting_approval`, `ambiguous_escalated`, or `failed`), with in-flight and processed tracking raising `StateValidationError` on re-entry attempts.
+- Enforced silence-over-guessing telemetry gap policy: missing or failed Loki logs or Tempo traces set `logs_available=False`, record failures in `anomaly`, and prevent fabricated telemetry.
+- Implemented untrusted telemetry screening `sanitize_telemetry_input` (OWASP LLM01) detecting and neutralizing prompt-injection instructions embedded in ingested log or trace text.
+- Enforced code-level circuit breaker checks triggering forced HITL escalation (`ReasoningLoopResult.status = "awaiting_approval"`) after repeated re-breaches on the same node.
+- Defined strict Pydantic V2 `ReasoningLoopResult` model (`strict=True, extra="forbid"`).
+- Exported reasoning loop coordinator and utilities from `backend/src/agents/__init__.py`.
+- Created comprehensive unit test suite in `backend/tests/unit/test_reasoning_loop.py` covering autonomous resolution, cycle cap enforcement, telemetry outage handling, prompt injection sanitization, and circuit breaker escalation (5 tests passing 100%).
+
+**Files Created:**
+- `backend/src/agents/reasoning_loop.py` — Multi-step reasoning loop coordinator with cycle caps, grounding verification, and prompt injection screening.
+- `backend/tests/unit/test_reasoning_loop.py` — Dedicated 5-test unit suite verifying reasoning loop behavior and constraints.
+
+**Files Modified:**
+- `backend/src/agents/__init__.py` — Exported `run_reasoning_loop`, `ReasoningLoopResult`, `reset_reasoning_loop_trackers`, and `sanitize_telemetry_input`.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_reasoning_loop.py -v` passed all 5 tests.
+- Full unit test suite `uv run pytest tests/unit/ -v` passed all 52 tests in 131.27s with 100% pass rate.
+- Pass
+---

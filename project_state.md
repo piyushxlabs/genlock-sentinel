@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 11: Wire Orchestration Graph
+- **Last Completed Step:** Step 12: Implement Reasoning Loop
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -28,6 +28,7 @@
   - Complete 7-node ADK Workflow Runtime graph compiled in `backend/src/agents/graph.py` matching `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 4
   - Individual node handlers implemented in `backend/src/agents/` enforcing the Node-Tool Access Matrix: Node 1 Stream Watch (non-LLM), Node 2 Evidence Triage (Gemini 3.7 Flash + Tools 1–3), Node 3 Root-Cause Correlation (Gemini 3.1 Pro + `ctx.route` decision edge + circuit breaker), Node 4 Autonomous Dispatch (deterministic Tools 4–6), Node 5 HITL Card Generation (Gemini 3.7 Flash `HITLCardPackage`), Node 6 HITL Pause (`hitl_supervisor_approval` interrupt), and Node 7 Post-Approval Handling (deterministic Tools 7–9)
   - Schema sanitization in `backend/src/agents/model_config.py` removing `additionalProperties` for Vertex AI Protobuf compatibility
-  - 47 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, and the complete 7-node orchestration graph
-- **Pending Next Step:** Step 12: Implement Reasoning Loop
+  - Multi-step reasoning loop coordinator in `backend/src/agents/reasoning_loop.py` enforcing strict 1-pass cycle caps per `event_id`, silence-over-guessing telemetry gap policies, prompt injection screening (OWASP LLM01), and circuit-breaker forced HITL escalation
+  - 52 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, and reasoning loop coordinator
+- **Pending Next Step:** Step 13: Implement Safety Guardrails
 - **Known Issues / Blockers:** None

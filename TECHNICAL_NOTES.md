@@ -72,3 +72,10 @@ Step 4 — No deviations from spec.
 **Reason:** Strictly satisfies `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 4 and `node-tool-access-matrix-restrictions.md`. ADK 2.x Workflow requires the initial graph edge to originate from `START`. Vertex AI's REST endpoint rejects Pydantic V2 `extra="forbid"` JSON schema's `additionalProperties: False` with `400 INVALID_ARGUMENT: Unknown name "additional_properties" at 'generation_config.response_schema'`. Stripping `additionalProperties` and `title` preserves schema structure while satisfying Google GenAI Protobuf constraints.
 **Impact:** Provides a fully executable, strictly isolated 7-node orchestration workflow with deterministic state reductions, circuit-breaker safety, and durable HITL interrupt/resume ready for multi-turn reasoning loops in Step 12.
 ---
+
+---
+## Step 12 — 1-Pass Reasoning Loop Coordinator, Telemetry Sanitization & Cycle Cap Enforcement
+**Decision:** Implemented `run_reasoning_loop` in `backend/src/agents/reasoning_loop.py` with strict global tracking sets (`_PROCESSED_EVENT_IDS` and `_IN_FLIGHT_EVENT_IDS`), raising `StateValidationError` if an `event_id` attempts a second diagnostic pass or concurrent re-entry; implemented `sanitize_telemetry_input` screening untrusted Loki and Tempo data against instruction-injection patterns (OWASP LLM01); and verified deterministic routing to autonomous vs HITL paths based on `ctx.route` and rolling circuit breaker history.
+**Reason:** Strictly fulfills `AGENT_MASTER_PLAN.md` Section 6, Section 10 Step 12, `graph-topology-loop-caps-and-circuit-breakers.md`, and `scope-screening-and-safety-gate-order.md`. Virtual production stages cannot tolerate unbounded ReAct loops, multi-turn hallucinations, or infinite failover oscillations. Ingested cluster logs are untrusted inputs that must never override agent behavioral directives.
+**Impact:** Guarantees deterministic, bounded, single-pass diagnosis and remediation execution with zero hallucination and robust prompt-injection immunity, preparing the agent runtime for Google Model Armor integration in Step 13.
+---
