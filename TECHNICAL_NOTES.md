@@ -44,3 +44,10 @@ Step 4 — No deviations from spec.
 **Reason:** Satisfies `state-invariants-and-tool-preconditions.md` and `code-level-verification-over-model-discretion.md`. Enforces that `session_id` and `config` cannot drift mid-session, concurrent node drift events cannot collide, and audit trails (`diagnosis_history`, `remediation_log`, `error_logs`) can never lose entries under sequential or asynchronous state mutations.
 **Impact:** Provides bulletproof typed state mutations for ADK Workflow runtime nodes, SSE streaming state-deltas, and session checkpointing backends.
 ---
+
+---
+## Step 8 — Checkpointing with ADK DatabaseSessionService & Async Engines
+**Decision:** Implemented `backend/src/state/checkpointing.py` using `google.adk.sessions.DatabaseSessionService` backed by async database engines (`sqlite+aiosqlite` for local dev/testing and `postgresql+asyncpg` for production Cloud SQL), adding `sqlalchemy>=2.0` to `backend/pyproject.toml`; implemented atomic session updates via ADK `Event(actions=EventActions(state_delta=...))` and added pre-validators for enum deserialization.
+**Reason:** Fulfills `AGENT_MASTER_PLAN.md` Section 4 Step 4 and Section 10 Step 8, strictly honoring `async-io-and-pydantic-validation-mandate.md` (no blocking DB calls). ADK's `DatabaseSessionService` handles table creation, row locking, and session lifecycle natively while maintaining zero-loss durability during HITL pause/resume.
+**Impact:** Enables durable graph execution checkpointing, seamless recovery after interruptions or crashes, and smooth resumption of HITL approval workflows in subsequent steps.
+---

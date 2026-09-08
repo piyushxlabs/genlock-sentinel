@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.structured_outputs.evidence_bundle_extraction import EvidenceBundleExtraction
 from src.structured_outputs.hitl_card_package import HITLCardPackage
@@ -266,3 +266,17 @@ class GenlockSentinelState(BaseModel):
     config: RuntimeConfig = Field(
         default_factory=RuntimeConfig, description="Locked session configuration (immutable)"
     )
+
+    @field_validator("session_status", mode="before")
+    @classmethod
+    def _coerce_session_status(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return SessionStatus(v)
+        return v
+
+    @field_validator("approval_state", mode="before")
+    @classmethod
+    def _coerce_approval_state(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return ApprovalStatus(v)
+        return v

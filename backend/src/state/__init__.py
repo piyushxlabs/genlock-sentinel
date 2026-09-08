@@ -1,9 +1,18 @@
 """Genlock Sentinel — Typed State, Reducers, and Checkpointing.
 
-Authoritative state models and deterministic reducers per
-AGENT_ORCHESTRATION_BLUEPRINT.md Section 3.
+Authoritative state models, deterministic reducers, and checkpointing per
+AGENT_ORCHESTRATION_BLUEPRINT.md Section 3 and AGENT_MASTER_PLAN.md Section 4 & 10.
 """
 
+from src.state.checkpointing import (
+    create_session_service,
+    delete_checkpoint,
+    get_database_url,
+    init_checkpoint_db,
+    list_checkpoints,
+    load_checkpoint,
+    save_checkpoint,
+)
 from src.state.reducers import (
     STATE_FIELD_REDUCERS,
     reduce_append_only,
@@ -47,4 +56,12 @@ __all__ = [
     "reduce_state",
     "reduce_state_batch",
     "STATE_FIELD_REDUCERS",
+    # Checkpointing
+    "get_database_url",
+    "create_session_service",
+    "init_checkpoint_db",
+    "save_checkpoint",
+    "load_checkpoint",
+    "delete_checkpoint",
+    "list_checkpoints",
 ]

@@ -247,3 +247,35 @@
 - Full unit test suite `uv run pytest tests/unit/ -v` passed all 22 tests in 9.86s with 100% pass rate.
 - Pass
 ---
+## Step 8 — Initialize Checkpointing Backend
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented `backend/src/state/checkpointing.py` utilizing ADK's `DatabaseSessionService` with async database engines supporting Cloud SQL for PostgreSQL (`postgresql+asyncpg`) and local SQLite dev fallback (`sqlite+aiosqlite`).
+- Implemented dynamic database connection URL normalization resolving relative SQLite file paths to absolute paths relative to `backend/`.
+- Implemented async table schema initialization via `init_checkpoint_db` and `prepare_tables()`.
+- Implemented high-level typed checkpoint managers (`save_checkpoint`, `load_checkpoint`, `delete_checkpoint`, `list_checkpoints`) operating directly on `GenlockSentinelState`.
+- Implemented atomic state updates for existing sessions via ADK `Event` emission with `EventActions(state_delta=...)`.
+- Updated `backend/src/state/schema.py` with `@field_validator("session_status", "approval_state", mode="before")` ensuring string-to-enum coercion during database dictionary deserialization under strict Pydantic V2 validation.
+- Exported checkpointing utilities from `backend/src/state/__init__.py`.
+- Built automated test suite in `backend/tests/unit/test_checkpointing.py` covering URL resolution, table initialization, complete 100% round-trip fidelity across all 10 fields, multi-step state evolutions, session deletion, and graceful missing session handling.
+
+**Files Created:**
+- `backend/src/state/checkpointing.py` — Checkpointing backend module with ADK DatabaseSessionService and typed checkpoint helpers.
+- `backend/tests/unit/test_checkpointing.py` — Unit tests for database checkpointing operations.
+
+**Files Modified:**
+- `backend/src/state/schema.py` — Added enum pre-validators for database dictionary deserialization.
+- `backend/src/state/__init__.py` — Exported checkpointing helper functions.
+- `backend/pyproject.toml` — Added `sqlalchemy>=2.0` dependency.
+
+**Packages Installed:**
+- `sqlalchemy@2.0.52` — Async SQL toolkit and ORM required by `google.adk.sessions.database_session_service`.
+- `greenlet@3.5.5` — Asyncio greenlet context management for SQLAlchemy.
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_checkpointing.py -v` passed all 6 tests.
+- Full unit test suite `uv run pytest tests/unit/ -v` passed all 28 tests in 10.54s with 100% pass rate.
+- Pass
+---
