@@ -68,10 +68,16 @@ backend/gcp-key.json
 
 
 
+# Internal AI Agent / Dev-process files (not for public repo)
 progress_log.md
 project_state.md
 TECHNICAL_NOTES.md
 do_after_completion.md
 CLAUDE.md
+
+# AI coding assistant configuration
+.agents/
+
+# Internal specification docs (kept local only)
 docs/
 .docs/

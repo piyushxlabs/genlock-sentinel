@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 <img src="./assets/banner.png" alt="Genlock Sentinel — Autonomous Genlock & Frame-Sync SRE Agent for In-Camera VFX nDisplay Clusters" width="100%" style="border-radius: 12px;" />
 
@@ -544,8 +544,7 @@ genlock-sentinel/
 │   ├── package.json                             # React 18, Vite, Lucide, Tailwind CSS
 │   └── vite.config.ts                           # Vite 6 configuration & API reverse proxy
 │
-├── LICENSE                                      # MIT License
-└── CLAUDE.md                                    # Architectural rules & developer context
+└── LICENSE                                      # MIT License
 ```
 
 ---
