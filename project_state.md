@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 18: Integrate Telemetry & Observability
+- **Last Completed Step:** Step 19: Run Automated Evaluation Suites & Adversarial Validation
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -50,12 +50,16 @@
   - All 7 Generative UI components implemented per Section 4a: `SyncOffsetChart.tsx`, `StepTracker.tsx`, `EvidenceCard.tsx`, `DiagnosisBadge.tsx`, `ApprovalCardModal.tsx`, `RemediationLog.tsx`, and `FailureBanner.tsx`
   - Main operations console dashboard in `frontend/src/App.tsx` with live stage burn counter ($1,800/min), emergency stop button, split view layout, and modal approval overlay
   - Production bundle verified via `pnpm build` (`tsc && vite build`: 1868 modules transformed in 2.19s, zero errors)
-  - 141 backend unit tests passing 100% across all 14 modules in `backend/tests/unit/`
   - OTel GenAI 4-level span hierarchy: session → event → node → tool with `gen_ai.*` semantic convention attributes
   - Dual-export OTLP TracerProvider: gRPC to Cloud Trace + HTTP/Basic Auth to Langfuse; graceful degradation to BatchSpanProcessor-only when credentials absent
   - Feedback annotation client (`FeedbackAnnotationClient`) writing `diagnosis_accuracy` and `hitl_decision` Langfuse REST Scores for Section 7a evaluation pipeline
   - `POST /sessions/{session_id}/events/{event_id}/feedback` endpoint for supervisor post-hoc diagnosis labelling
   - `bootstrap_telemetry()` and `shutdown_telemetry()` wired into FastAPI lifespan
   - All 7 reasoning loop nodes wrapped with `node_span()` and `event_span()` context managers
-- **Pending Next Step:** Step 19: Adversarial Testing & Red-Team Validation
+  - Section 9.1 Mock test data fixtures in `backend/tests/mocks/test_data.py`
+  - Automated LLM Evaluation Suite in `backend/tests/evals/test_llm_evals.py` (11 tests covering Tool-Calling Accuracy, Hallucination Prevention, Strict Grounding & Citation, Conflicting Evidence arbitration, and HITL Resumption)
+  - Adversarial Testing & Red-Team Validation Suite in `backend/tests/evals/test_adversarial_red_team.py` (17 tests covering OWASP LLM01, LLM02, LLM06, circuit breakers, emergency stop mid-cycle, and failure simulations)
+  - Checkpoint and database durability evaluation suite in `backend/tests/evals/test_checkpoint_cloudsql.py` (3 tests covering Cloud SQL/SQLite roundtrip and crash-and-resume recovery)
+  - 172 automated tests passing 100% (141 unit tests + 31 evaluation & red-team tests) across backend
+- **Pending Next Step:** Step 20: End-to-End Verification
 - **Known Issues / Blockers:** None

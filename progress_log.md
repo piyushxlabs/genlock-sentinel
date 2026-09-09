@@ -622,3 +622,33 @@
 - Pass
 ---
 
+---
+## Step 19 — Run Automated Evaluation Suites & Adversarial Validation
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Created `backend/tests/mocks/test_data.py`: Central mock telemetry fixtures (Simple Case, Complex Case, Edge Case, Asset Stall Case, Thermal Throttle Case) and raw MCP / actuator responses per Section 9.1.
+- Created `backend/tests/evals/test_llm_evals.py`: Automated LLM evaluation suite testing Tool-Calling Accuracy (Simple Case routes to failover_cluster_leadership only, Asset Stall routes to deprioritize_texture_streaming only, Thermal routes to force_genlock_resync only, Approved HITL routes to halt_live_take only), Hallucination Prevention & Silence-Over-Guessing (Loki timeout sets logs_available=false with zero log fabrication), Strict Grounding & Citation Verification, and HITL Graph Resumption per Section 9.3 (11 tests).
+- Created `backend/tests/evals/test_adversarial_red_team.py`: Red-team adversarial test suite covering OWASP Top 10 for LLM Applications 2025 (LLM01 Prompt Injection, LLM02 Sensitive Credential Leakage, LLM06 Excessive Agency), Circuit Breaker anti-oscillation loop caps, Emergency Stop mid-cycle checkpoint preservation, Malformed Telemetry graceful handling, and Tool JSON schema enforcement per Section 8, 9.5, and 9.6 (17 tests).
+- Created `backend/tests/evals/test_checkpoint_cloudsql.py`: Database checkpointer durability and session state recovery testing Cloud SQL PostgreSQL (postgresql+asyncpg) and local SQLite (sqlite+aiosqlite) roundtrip fidelity across all 10 GenlockSentinelState fields (3 tests).
+- Enhanced `backend/src/agents/reasoning_loop.py`: Expanded untrusted telemetry prompt-injection screening pattern to catch composite instruction overrides ("ignore all previous instructions").
+
+**Files Created:**
+- `backend/tests/mocks/test_data.py` — Central test fixtures and mock payloads for Section 9.1 drift events.
+- `backend/tests/evals/test_llm_evals.py` — LLM evaluation suite for tool accuracy, grounding citations, and HITL resumption.
+- `backend/tests/evals/test_adversarial_red_team.py` — Adversarial red-team test suite for OWASP LLM01, LLM02, LLM06, circuit breakers, and failure simulations.
+- `backend/tests/evals/test_checkpoint_cloudsql.py` — Checkpoint and database durability evaluation suite testing Cloud SQL/SQLite roundtrip and crash-and-resume recovery.
+
+**Files Modified:**
+- `backend/src/agents/reasoning_loop.py` — Upgraded regex pattern for prompt-injection screening to catch multi-keyword variations.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/evals/ -v`: 31/31 passed (100%).
+- `uv run pytest tests/ -q`: 172/172 passed across all unit and evaluation suites (100%).
+- `pnpm build`: TypeScript & Vite production console bundle built cleanly in 2.27s (0 errors).
+- Pass
+---

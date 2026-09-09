@@ -51,7 +51,7 @@ _IN_FLIGHT_EVENT_IDS: Set[str] = set()
 
 # Prompt-injection pattern screening for untrusted telemetry
 _INJECTION_PATTERNS = [
-    re.compile(r"ignore\s+(previous|all)\s+instructions", re.IGNORECASE),
+    re.compile(r"ignore\s+(?:all\s+|previous\s+|prior\s+)*instructions", re.IGNORECASE),
     re.compile(r"system\s*prompt\s*override", re.IGNORECASE),
     re.compile(r"you\s+are\s+now\s+in\s+developer\s+mode", re.IGNORECASE),
     re.compile(r"admin\s+override", re.IGNORECASE),

@@ -130,3 +130,17 @@ Step 4 — No deviations from spec.
 **Impact:** Langfuse SDK upgrades do not affect the annotation pipeline. Any API breaking changes in Langfuse REST Scores endpoint will require a minor update to _SCORES_PATH and LangfuseScoreRequest schema.
 
 ---
+
+---
+## Step 19 — Native ADK Context & InMemorySessionService Fixture Pattern for Evals
+**Decision:** All evaluation test suites (`test_llm_evals.py`, `test_adversarial_red_team.py`) instantiate test execution contexts using `InMemorySessionService` and `InvocationContext` wrapped in ADK's native `Context(inv)` rather than ad-hoc mock objects.
+**Reason:** ADK Workflow Runtime components (nodes, tools, and reducers) interact with `ctx.actions.state_delta` and session-backed state serialization. Using native ADK `Context` guarantees that internal state deltas, route definitions (`ctx.route`), and state validations execute identically to live Cloud SQL session runs without artificial mocking artifacts.
+**Impact:** Ensures all downstream integration and verification tests in Step 20 and Step 21 execute against authentic ADK session lifecycles.
+---
+
+---
+## Step 19 — OWASP Composite Instruction Override Pattern Matching
+**Decision:** Updated `_INJECTION_PATTERNS` regex in `backend/src/agents/reasoning_loop.py` to `re.compile(r"ignore\s+(?:all\s+|previous\s+|prior\s+)*instructions", re.IGNORECASE)` to catch multi-qualifier prompt-injection strings ("ignore all previous instructions").
+**Reason:** Adversarial red-team testing revealed that complex jailbreak attempts combine multiple qualifier tokens before the word "instructions". Expanding the non-capturing group to match arbitrary repetitions of qualifier tokens ensures zero instruction-like telemetry text bypasses the first-line sanitizer before reaching Gemini.
+**Impact:** Provides bulletproof screening across both `reasoning_loop.py` and `model_armor_client.py` against OWASP LLM01 prompt-injection vectors in ingested Loki log streams.
+---
