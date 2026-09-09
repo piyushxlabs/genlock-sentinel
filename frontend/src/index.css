@@ -134,7 +134,7 @@ code, pre, .mono {
   height: 100dvh;          /* lock to viewport height              */
   max-width: 1920px;
   margin: 0 auto;
-  padding: 16px 20px 12px; /* tight padding — every pixel counts   */
+  padding: 10px 16px 8px;  /* tight padding for full 1080p fit     */
   overflow: hidden;         /* prevent page-level scroll            */
   box-sizing: border-box;
 }
@@ -143,12 +143,12 @@ code, pre, .mono {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 8px 16px;
   background: linear-gradient(135deg, rgba(11,17,32,0.96) 0%, rgba(14,22,40,0.96) 100%);
   border: 1px solid var(--border-card);
   border-top: 2px solid rgba(6,182,212,0.40);
-  border-radius: 14px;
-  margin-bottom: 14px;
+  border-radius: 12px;
+  margin-bottom: 8px;
   backdrop-filter: blur(20px);
   box-shadow:
     0 4px 24px rgba(0,0,0,0.45),
@@ -159,19 +159,64 @@ code, pre, .mono {
 /* Step tracker wrapper — fixed height, never shrinks */
 .step-tracker-wrapper {
   flex-shrink: 0;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 /*
- * Cockpit 12-column main grid.
- * Single column on smaller screens; 7/5 split above 1280px.
+ * Studio Rack 3-Tier Layout:
+ * 1. Top Strip: Header + StepTracker
+ * 2. Middle Strip: Full Cinematic-Width Telemetry & LED Matrix
+ * 3. Bottom Rack: 3 Equal Columns (Root Cause, Evidence, Remediation)
  */
+.studio-chart-strip {
+  flex: 0 0 285px;
+  min-height: 220px;
+  max-height: 320px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.studio-chart-strip > * {
+  height: 100%;
+  min-height: 0;
+}
+
+.studio-bottom-rack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .studio-bottom-rack {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.rack-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.rack-col > * {
+  min-height: 100%;
+}
+
+/* Cockpit 12-column legacy support */
 .cockpit-grid {
   display: grid;
-  grid-template-columns: 1fr;    /* mobile: stack                    */
+  grid-template-columns: 1fr;
   gap: 16px;
-  flex: 1 1 0;                   /* fill remaining vertical space    */
-  min-height: 0;                 /* allow children to shrink/scroll  */
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 @media (min-width: 1280px) {
@@ -180,7 +225,6 @@ code, pre, .mono {
   }
 }
 
-/* Left column — Chart fills full available height */
 .cockpit-col-left {
   display: flex;
   flex-direction: column;
@@ -193,7 +237,6 @@ code, pre, .mono {
   min-height: 0;
 }
 
-/* Right column — stacked panels scroll internally */
 .cockpit-col-right {
   display: flex;
   flex-direction: column;
@@ -404,15 +447,17 @@ code, pre, .mono {
 .modal-dialog {
   background: linear-gradient(160deg, #0c1524 0%, #0b1220 100%);
   border: 2px solid rgba(245, 158, 11, 0.45);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow:
     0 0 50px rgba(245, 158, 11, 0.15),
     0 24px 60px rgba(0,0,0,0.7),
     inset 0 1px 0 rgba(255,220,100,0.08);
   width: 100%;
-  max-width: 840px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-width: 680px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: modal-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

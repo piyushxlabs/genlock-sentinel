@@ -348,54 +348,26 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* ── Main 12-Column Cockpit Grid ─────────────────────────────────
-           Left  (xl: 7/12): SyncOffsetChart + LED matrix
-           Right (xl: 5/12): Diagnosis · Evidence · Remediation
-      ──────────────────────────────────────────────────────────────── */}
-      <div className="cockpit-grid">
-        {/* Left column — telemetry */}
-        <div className="cockpit-col-left">
-          <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
+      {/* ── Middle Strip: Full Cinematic-Width Telemetry & LED Matrix ── */}
+      <div className="studio-chart-strip">
+        <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
+      </div>
+
+      {/* ── Bottom Rack: 3-Column Equal Grid ─────────────────────────── */}
+      <div className="studio-bottom-rack">
+        {/* Column 1: Gemini 3.1 Pro Root-Cause Correlation */}
+        <div className="rack-col cockpit-scroll">
+          <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
         </div>
 
-        {/* Right column — diagnosis, evidence, remediation */}
-        <div className="cockpit-col-right cockpit-scroll">
-          {/* Subtle scroll hint affordance */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              paddingRight: "2px",
-              marginBottom: "-4px",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "10px",
-                color: "rgba(6, 182, 212, 0.7)",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                background: "rgba(6, 182, 212, 0.06)",
-                border: "1px solid rgba(6, 182, 212, 0.2)",
-                padding: "2px 6px",
-                borderRadius: "4px",
-              }}
-            >
-              Scrollable Feed ↕
-            </span>
-          </div>
+        {/* Column 2: Triaged Observability Evidence (Loki / Tempo) */}
+        <div className="rack-col cockpit-scroll">
+          <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
+        </div>
 
-          <div className="shrink-0" style={{ flexShrink: 0 }}>
-            <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
-          </div>
-          <div className="shrink-0" style={{ flexShrink: 0 }}>
-            <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
-          </div>
-          <div className="shrink-0" style={{ flexShrink: 0 }}>
-            <RemediationLog logs={state.remediation_log} />
-          </div>
+        {/* Column 3: Actuator Remediation Timeline */}
+        <div className="rack-col cockpit-scroll">
+          <RemediationLog logs={state.remediation_log} />
         </div>
       </div>
 
