@@ -141,46 +141,46 @@ flowchart TD
     subgraph STAGE["🎥 Live ICVFX Stage ($1,800/min Burn)"]
         CAM["📷 Virtual Production Camera (PTP IEEE 1588 Genlock)"]
         CLUSTER["🖥️ 16-Node Unreal Engine nDisplay Cluster (R01 - R16)"]
-        CAM -->|Genlock Pulse| CLUSTER
+        CAM -->|"Genlock Pulse"| CLUSTER
     end
 
     subgraph GRAFANA["📊 Observability Plane (Grafana Cloud MCP)"]
         PROM["Prometheus: sync_offset_us (> 150µs breach)"]
         LOKI["Loki: LogDisplayClusterEngine & PTP Sync Jitter"]
         TEMPO["Tempo: Distributed Traces & Frame Render Barriers"]
-        CLUSTER -->|Vsync Metrics| PROM
-        CLUSTER -->|Node Logs| LOKI
-        CLUSTER -->|Trace Spans| TEMPO
+        CLUSTER -->|"Vsync Metrics"| PROM
+        CLUSTER -->|"Node Logs"| LOKI
+        CLUSTER -->|"Trace Spans"| TEMPO
     end
 
     subgraph SECURITY["🛡️ Zero-Trust Boundary (Google Model Armor)"]
-        ARMOR["Model Armor Sanitizer\n(OWASP LLM01 Injection & LLM02 Credential Scrubbing)"]
+        ARMOR["Model Armor Sanitizer<br/>(OWASP LLM01 Injection & LLM02 Credential Scrubbing)"]
         GUARDS["State Invariant & Prohibition Guards"]
     end
 
     subgraph ADK["🤖 Google ADK 2.8.0 Workflow Runtime (7-Node Graph)"]
-        N1["Node 1: Stream Watch\n(Non-LLM Ingestion)"]
-        N2["Node 2: Evidence Triage\n(Gemini 3.7 Flash + MCP Tools)"]
-        N3["Node 3: Root-Cause Correlation\n(Gemini 3.1 Pro @ temp=0.0)"]
+        N1["Node 1: Stream Watch<br/>(Non-LLM Ingestion)"]
+        N2["Node 2: Evidence Triage<br/>(Gemini 3.7 Flash + MCP Tools)"]
+        N3["Node 3: Root-Cause Correlation<br/>(Gemini 3.1 Pro @ temp=0.0)"]
         
-        DECISION{"Decision Edge\nCategory == ambiguous OR\nConfidence < 0.75 OR\nAction in [halt, greenscreen, failover]?"}
+        DECISION{"Decision Edge<br/>Category == ambiguous OR<br/>Confidence < 0.75 OR<br/>High-Impact Action?"}
 
-        N4["Node 4: Autonomous Dispatch\n(Deterministic Reversible Tools 4-6)"]
-        N5["Node 5: HITL Card Generation\n(Gemini 3.7 Flash Structured Package)"]
-        N6["Node 6: HITL Pause\n(ADK LongRunningFunctionTool Interrupt)"]
-        N7["Node 7: Post-Approval Handling\n(Deterministic High-Stakes Tools 7-9)"]
+        N4["Node 4: Autonomous Dispatch<br/>(Deterministic Reversible Tools 4-6)"]
+        N5["Node 5: HITL Card Generation<br/>(Gemini 3.7 Flash Structured Package)"]
+        N6["Node 6: HITL Pause<br/>(ADK LongRunningFunctionTool Interrupt)"]
+        N7["Node 7: Post-Approval Handling<br/>(Deterministic High-Stakes Tools 7-9)"]
 
-        N1 -->|active_drift_event| N2
-        N2 -->|evidence_bundle| N3
+        N1 -->|"active_drift_event"| N2
+        N2 -->|"evidence_bundle"| N3
         N3 --> DECISION
-        DECISION -->|Autonomous Path\nconf >= 0.75 & reversible| N4
-        DECISION -->|HITL Escalation Path\nambiguous OR high-impact| N5
-        N5 -->|pending_hitl_card| N6
-        N6 -.->|Supervisor Approve via REST| N7
+        DECISION -->|"Autonomous Path (conf >= 0.75)"| N4
+        DECISION -->|"HITL Escalation Path"| N5
+        N5 -->|"pending_hitl_card"| N6
+        N6 -.->|"Supervisor Approve via REST"| N7
     end
 
     subgraph STORAGE["💾 Enterprise Checkpointing"]
-        DB[("Google Cloud SQL (PostgreSQL)\nasyncpg Session Adapter\n10-Field State & Pure Reducers")]
+        DB[("Google Cloud SQL (PostgreSQL)<br/>asyncpg Session Adapter<br/>10-Field State & Pure Reducers")]
     end
 
     subgraph COCKPIT["💻 Hollywood Carbon Cockpit Console (React 18 + Vite)"]
@@ -191,13 +191,14 @@ flowchart TD
     end
 
     PROM --> N1
-    LOKI --> ARMOR --> N2
-    TEMPO --> ARMOR --> N2
-    N4 -->|Reversible Actuation| CLUSTER
-    N7 -->|Halt Live Take / Greenscreen| CLUSTER
+    LOKI --> ARMOR
+    TEMPO --> ARMOR
+    ARMOR --> N2
+    N4 -->|"Reversible Actuation"| CLUSTER
+    N7 -->|"Halt Live Take / Greenscreen"| CLUSTER
     ADK <--> DB
-    ADK -->|AG-UI SSE (RFC 6902 JSON Patch)| COCKPIT
-    COCKPIT -->|POST /sessions/{id}/events/{id}/decision| N6
+    ADK -->|"AG-UI SSE (RFC 6902 JSON Patch)"| COCKPIT
+    COCKPIT -->|"POST /sessions/.../decision"| N6
 
     style STAGE fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
     style GRAFANA fill:#1e1b4b,stroke:#f97316,stroke-width:2px,color:#f8fafc
