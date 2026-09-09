@@ -1,49 +1,42 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 25 COMPLETION CHECKLIST
-# Drift Injection Concurrency & Mock Evidence Ingestion Verification
+# STEP 26 COMPLETION CHECKLIST
+# Master Hackathon Delivery & Final Stage Verification
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏰ BEFORE running the next prompt — do these first:
+⏰ BEFORE running any further commands — do these first:
 
-[ ] Verify backend server is running and responsive:
+[ ] Verify backend server is running and healthy:
     ```
-    powershell -Command "Invoke-WebRequest -Uri 'http://localhost:8000/healthz' -TimeoutSec 5 | Select-Object -ExpandProperty Content"
+    curl.exe -s http://localhost:8000/healthz
     ```
-    Expected: {"status":"healthy"}
+    Expected: {"status":"healthy","app_name":"genlock_sentinel","streaming_mode":"SSE","vertex_ai_enabled":true}
 
-[ ] Verify frontend console is running and responsive:
+[ ] Verify frontend console is running at http://localhost:3000:
     ```
-    powershell -Command "Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode"
+    curl.exe -s -o NUL -w "%{http_code}" http://localhost:3000
     ```
     Expected: 200
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Run injected telemetry unit test suite:
+[ ] Run Master Hackathon Delivery Verification Suite:
     ```
     cd backend
-    uv run pytest tests/unit/test_injected_telemetry.py -v
+    uv run pytest tests/evals/test_final_delivery_verification.py -v
     ```
-    Expected: 7 passed in ~1s
-    If wrong: Check `backend/src/tools/mcp_clients/grafana_mcp_client.py` and `simulate_drift.py`.
+    Expected: 12 passed in ~3s
+    If wrong: Check test trace and ensure MCP cache is clear.
 
-[ ] Run full backend unit test suite:
+[ ] Run Full Automated Test Suite (227 tests):
     ```
     cd backend
-    uv run pytest tests/unit/ -q
+    uv run pytest tests/ -q
     ```
-    Expected: 154 passed, 1 skipped in ~6s
-    If wrong: Check test output and ensure mock telemetry cache was properly cleared between tests.
+    Expected: 227 passed, 2 skipped in ~6s
+    If wrong: Review failing test and check environment variables in `backend/.env`.
 
-[ ] Run production readiness and failure simulation suite:
-    ```
-    cd backend
-    uv run pytest tests/evals/test_production_readiness.py -v
-    ```
-    Expected: 14 passed in ~3s
-
-[ ] Run frontend production build check:
+[ ] Run Frontend Production Build:
     ```
     cd frontend
     pnpm build
@@ -54,12 +47,11 @@
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/scripts/simulate_drift.py` — Added `check_backend_ready()` probing `GET /healthz` and `GET /docs`; 3-attempt backoff retry loop with fail-fast `sys.exit(1)` on connection failure to prevent orphaned events without Loki/Tempo payloads; standardized URL to `http://localhost:8000`; 120s timeout.
-[ ] File: `backend/src/tools/mcp_clients/grafana_mcp_client.py` — In-memory cached mock telemetry storage (`_injected_loki`, `_injected_tempo_spans`), `register_injected_telemetry()`, and Model Armor prompt-injection screening on all retrieved lines and spans.
-[ ] File: `backend/src/tools/evidence_triage_tools.py` — Forwarded `node_id` in `query_loki_logs` to route queries to node-specific injected telemetry caches.
-[ ] File: `backend/src/main.py` — Registered incoming `mock_loki_lines` and `mock_tempo_spans` in `/sessions/{session_id}/inject-drift` via `get_mcp_client().register_injected_telemetry()`.
-[ ] File: `backend/src/state/checkpointing.py` — Cached `DatabaseSessionService` singleton and `_tables_prepared` tracking flag; added 3-attempt reload-and-retry loop on `StaleSessionError` in `save_checkpoint`.
-[ ] File: `backend/tests/unit/test_injected_telemetry.py` — 7 comprehensive unit tests for injected telemetry caching, Model Armor screening, edge scenario gap handling, readiness probe, and connection failure fast-fail behavior.
+[ ] File: `backend/tests/evals/test_final_delivery_verification.py` — Master delivery verification test suite certifying the 7-node ADK graph topology, Node-Tool Access Matrix, OWASP LLM01, LLM02, LLM06, Model Armor, silence-over-guessing, 10-field state invariants, and end-to-end execution.
+[ ] File: `README.md` — Project-level master documentation with architectural Mermaid diagrams, Google Cloud & Grafana Labs track alignments, live test results, quickstart guide, and 2-minute judge evaluation instructions.
+[ ] File: `docs/FINAL_HACKATHON_DELIVERY_REPORT.md` — Comprehensive hackathon delivery report and audit summary.
+[ ] File: `frontend/README.md` — Frontend console documentation and component architecture.
+[ ] File: `backend/README.md` — Expanded backend documentation with complete production setup, Cloud SQL connection guide, and API endpoint reference.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -67,40 +59,50 @@
 
 Test 1 — Files Exist:
 ```
-powershell -Command "Test-Path backend\tests\unit\test_injected_telemetry.py, backend\scripts\simulate_drift.py, backend\src\tools\mcp_clients\grafana_mcp_client.py"
+powershell -Command "Test-Path README.md, docs\FINAL_HACKATHON_DELIVERY_REPORT.md, backend\tests\evals\test_final_delivery_verification.py, frontend\README.md, backend\README.md"
 ```
-✅ Expected: True, True, True
+✅ Expected: True, True, True, True, True
 ❌ If missing: Restore from git history.
 
-Test 2 — Environment / Dependencies:
+Test 2 — Full Test Suite Passes (100% Pass Rate):
 ```
 cd backend
-uv run python -c "import httpx, pydantic, google.genai, asyncpg; print('All critical packages imported successfully')"
+uv run pytest tests/ -q
 ```
-✅ Expected: All critical packages imported successfully
-❌ If errors: Run `uv sync` in `backend/`
+✅ Expected: 227 passed, 2 skipped
+❌ If errors: Check python environment and dependencies.
 
-Test 3 — Server or Process Start:
-```
-powershell -Command "Invoke-RestMethod -Uri 'http://localhost:8000/healthz' -Method Get"
-```
-✅ Expected: @{status=healthy}
-❌ If errors: Check if uvicorn process is running (`uv run uvicorn src.main:app --host 0.0.0.0 --port 8000`)
-
-Test 4 — Functional Check (Simulated Drift Injection with Evidence):
+Test 3 — Live Autonomous Demonstration Run:
 ```
 cd backend
-uv run python scripts/simulate_drift.py --scenario simple --event-id drift-test-check-001
+uv run python scripts/simulate_drift.py --scenario simple
 ```
-✅ Expected: 
-- Probes backend readiness: [SUCCESS]
-- Dispatches HTTP POST to http://localhost:8000/sessions/session-sim-001/inject-drift
-- Returns HTTP 202 Accepted
-- Node 2 triage extracts `logs_available: True` and populated log/trace summaries without falling back to telemetry gaps.
-❌ If wrong: Ensure backend is running and `simulate_drift.py` has network access to port 8000.
+✅ Expected:
+- Backend readiness probe succeeds (HTTP 200)
+- Drift event emitted with 185.4µs offset on render-07
+- HTTP dispatch accepted (HTTP 202)
+- Node 2 triages Loki logs and Tempo traces (logs_available: True)
+- Node 3 diagnoses network_jitter (0.95 confidence)
+- Node 4 dispatches failover_cluster_leadership autonomously
+- Checkpointed to Cloud SQL and streamed to console
 
-Test 5 — Security Check:
-[ ] Verify .env is in .gitignore
+Test 4 — Live HITL Escalation Demonstration Run:
+```
+cd backend
+uv run python scripts/simulate_drift.py --scenario complex
+```
+✅ Expected:
+- Backend readiness probe succeeds (HTTP 200)
+- Drift event emitted with 210.0µs offset on render-12
+- HTTP dispatch accepted (HTTP 202)
+- Node 2 triages conflicting thermal (94°C) vs network logs
+- Node 3 diagnoses ambiguous with multi-sentence reasoning
+- Node 5 generates HITLCardPackage ($5,000 USD, visual impact score 9.0/10)
+- Node 6 pauses at checkpoint (SessionStatus.AWAITING_APPROVAL)
+- Console modal opens for supervisor authorization
+
+Test 5 — Security & Credential Check:
+[ ] Verify .env is strictly ignored:
     ```
     git check-ignore backend/.env
     ```
@@ -114,12 +116,13 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 25: Drift Injection Concurrency & Mock Evidence Ingestion Verification"
+git commit -m "Step 26: Master Hackathon Delivery & Final Stage Verification"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 26 until:
-[ ] All tests above show ✅
+✋ PROJECT COMPLETE:
+[ ] All 227 tests show ✅
+[ ] Live Autonomous & HITL demonstrations verified
 [ ] Git commit is done
-[ ] You have read do_after_completion.md fully
+[ ] Genlock Sentinel is ready for hackathon judge evaluation!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
