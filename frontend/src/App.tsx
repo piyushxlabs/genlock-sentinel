@@ -394,7 +394,11 @@ export const App: React.FC = () => {
       <div className="cockpit-grid grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left column — telemetry */}
         <div className="cockpit-col-left xl:col-span-7 sticky top-4 self-start">
-          <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
+          <SyncOffsetChart
+            samples={telemetrySamples}
+            thresholdUs={150.0}
+            activeDriftEvents={state.active_drift_events}
+          />
         </div>
 
         {/* Right column — diagnosis, evidence, remediation */}
