@@ -120,21 +120,26 @@ async def post_approval_handling_node(
         if proposed_action == "halt_live_take":
             action_name = "halt_live_take"
             tool_res = await halt_live_take(payload, state=state)
+            details = tool_res.model_dump()
 
         elif proposed_action == "fallback_to_greenscreen":
             action_name = "fallback_to_greenscreen"
             tool_res = await fallback_to_greenscreen(payload, state=state)
+            details = tool_res.model_dump()
 
         elif proposed_action == "execute_threshold_exceeding_failover":
             action_name = "execute_threshold_exceeding_failover"
             tool_res = await execute_threshold_exceeding_failover(payload, state=state)
+            details = tool_res.model_dump()
+
+        elif proposed_action in ("none", "no_action", "acknowledge"):
+            action_name = "supervisor_acknowledged"
+            details = {"status": "approved_acknowledgment", "proposed_action": proposed_action}
 
         else:
             raise ToolExecutionError(
                 f"Unknown HITL-gated action: '{proposed_action}'"
             )
-
-        details = tool_res.model_dump()
 
         # Record action in state
         action_record = RemediationAction(
