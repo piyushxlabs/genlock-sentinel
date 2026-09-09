@@ -1,105 +1,107 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 14 COMPLETION CHECKLIST
-# Build Backend API/Server
+# STEP 15 COMPLETION CHECKLIST
+# Implement Typed Streaming Layer
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify that the FastAPI main application exists and has the endpoints:
-    ```powershell
-    Get-Content "backend\src\main.py" | Select-String "submit_decision", "stop_session", "healthz"
+[ ] Verify the backend virtual environment is active:
     ```
-    Expected: Matches for `submit_decision`, `stop_session`, and `healthz` appear in the output.
+    cd backend
+    uv run python --version
+    ```
+    Expected: Python 3.11.x appears
 
-[ ] Verify that the API test suite exists:
-    ```powershell
-    Test-Path "backend\tests\unit\test_api_server.py"
+[ ] Ensure git status is clean of untracked temporary files:
     ```
-    Expected: `True`
+    git status
+    ```
+    Expected: Only tracked changes ready to commit
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Run the FastAPI API unit test suite:
-    ```powershell
-    cd backend
-    uv run pytest tests/unit/test_api_server.py -v
+[ ] Run the typed streaming layer test suite:
     ```
-    Expected: All 11 tests pass with 100% pass rate in < 5 seconds.
-    If wrong: Ensure `backend/.venv` is active and dependencies are synced via `uv sync`.
+    cd backend
+    uv run pytest tests/unit/test_streaming_layer.py -v
+    ```
+    Expected: 19 passed in ~2 seconds
+    If wrong: Check event model schemas in `src/ui/event_types.py` or bridge logic in `src/ui/agui_bridge.py`.
 
-[ ] Run the full unit test suite across all project components:
-    ```powershell
+[ ] Run the full backend test suite to verify zero regressions:
+    ```
+    cd backend
     uv run pytest tests/unit/ -v
     ```
-    Expected: All 83 unit tests pass across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, safety guardrails, and API server.
-    If wrong: Check `tests/unit/test_api_server.py` or database checkpointing paths.
+    Expected: 102 passed with 100% success rate
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] Endpoint: `GET /health` and `GET /healthz` — Readiness endpoints returning `HealthResponse` with `streaming_mode="SSE"`.
-[ ] Endpoint: `GET /` — Root metadata endpoint returning service identification and status.
-[ ] Endpoint: `POST /sessions/{session_id}/events/{event_id}/decision` — Supervisor graph-resumption endpoint accepting strict `DecisionRequest` payload ("approve" or "deny"), enforcing checkpoint ID verification, rejecting modified inputs, updating state, recording audit logs, and persisting to checkpoint storage.
-[ ] Endpoint: `POST /sessions/{session_id}/stop` — Supervisor emergency stop endpoint accepting `StopSessionRequest`, halting active session, transitioning status to "stopped", and checkpointing state as-is.
-[ ] Models: `DecisionRequest`, `DecisionResponse`, `StopSessionRequest`, `StopSessionResponse`, `HealthResponse` with strict Pydantic V2 schema validation (`extra="forbid"`).
-[ ] File: `backend/src/main.py` — Updated FastAPI application with full operations endpoints and checkpoint persistence.
-[ ] File: `backend/tests/unit/test_api_server.py` — 11-test comprehensive unit and integration suite.
+[ ] File: `backend/src/ui/event_types.py` — Strict Pydantic V2 schemas for all 9 AG-UI SSE event types (`RUN_STARTED`, `STEP_STARTED`/`STEP_FINISHED`, `TOOL_CALL_*`, `REASONING_*`, `STATE_DELTA`, `RUN_PAUSED`, `RUN_ERROR`, `RUN_FINISHED`, `SYNC_OFFSET_SAMPLE`, `STATE_SNAPSHOT`) with `extra="forbid"` and `strict=True`.
+[ ] File: `backend/src/ui/agui_bridge.py` — Central `AGUIEventBridge` managing typed SSE stream pub/sub, RFC 6902 JSON Patch state delta generation across declared reducers (`append-only`, `merge-by-key`, `last-write-wins`), ADK 2.x `Event` projection, immediate `: ping\n\n` header flushing, and reconnect state snapshotting.
+[ ] File: `backend/src/ui/__init__.py` — Clean exports of streaming bridge and typed event models.
+[ ] File: `backend/src/main.py` — Mounted `GET /sessions/{session_id}/stream` endpoint returning `StreamingResponse(media_type="text/event-stream")`.
+[ ] File: `backend/tests/unit/test_streaming_layer.py` — 19-test unit test suite verifying event schemas, reducer projections, SSE wire formatting, multi-subscriber broadcasting, ADK projection, and live FastAPI SSE streaming.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Test 1 — Files Exist:
-```powershell
-Test-Path "backend\src\main.py", "backend\tests\unit\test_api_server.py"
 ```
-✅ Expected: `True`, `True`
-❌ If missing: Re-generate missing files from Step 14.
+dir backend\src\ui\
+dir backend\tests\unit\test_streaming_layer.py
+```
+✅ Expected: `__init__.py`, `event_types.py`, `agui_bridge.py`, and `test_streaming_layer.py` exist
+❌ If missing: Re-generate the missing module using the appropriate write tool
 
 Test 2 — Environment / Dependencies:
-```powershell
+```
 cd backend
-uv run python -c "from src.main import app; print('FastAPI app loaded successfully')"
+uv run python -c "from src.ui import AGUIEventBridge, StreamingEvent, RunStartedEvent; print('UI streaming layer imported successfully')"
 ```
-✅ Expected: `FastAPI app loaded successfully`
-❌ If errors: Run `uv sync` in `backend/`.
+✅ Expected: "UI streaming layer imported successfully"
+❌ If errors: Verify virtual environment and package installation (`uv sync`)
 
-Test 3 — API Server Test Suite:
-```powershell
-uv run pytest tests/unit/test_api_server.py -v
+Test 3 — Server or Process Start:
 ```
-✅ Expected: 11 passed in < 5 seconds.
-❌ If errors: Verify endpoint route parameters and Pydantic schemas in `backend/src/main.py`.
+cd backend
+uv run python -c "from src.main import app; print('Mounted routes:', [r.path for r in app.routes if 'stream' in r.path])"
+```
+✅ Expected: `Mounted routes: ['/sessions/{session_id}/stream']`
+❌ If errors: Verify FastAPI endpoint definition in `src/main.py`
 
-Test 4 — Full Test Suite Regression:
-```powershell
-uv run pytest tests/unit/ -v
+Test 4 — Functional Check:
 ```
-✅ Expected: 83 passed, 0 failed across all 11 test modules.
-❌ If errors: Check individual test failure logs.
+cd backend
+uv run pytest tests/unit/test_streaming_layer.py -v
+```
+✅ Expected: All 19 tests pass without timeouts or warnings
+❌ If wrong: Review `tests/unit/test_streaming_layer.py` and `src/ui/agui_bridge.py`
 
 Test 5 — Security Check:
-[ ] Verify .env is in .gitignore
-    ```powershell
-    git check-ignore -v backend/.env
+[ ] Verify .env is in .gitignore:
     ```
-    ✅ Expected: `.gitignore:3:*.env	backend/.env`
-    ❌ If missing: Add `*.env` to `.gitignore` immediately.
+    git check-ignore backend/.env
+    ```
+    ✅ Expected: `backend/.env` is ignored
+    ❌ If missing: Add `.env` to `.gitignore` immediately
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 GIT COMMIT
 (Run this ONLY after all above checks pass)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-```powershell
+```
 git add .
-git commit -m "Step 14: Build Backend API/Server — FastAPI decision, stop, and health endpoints with checkpoint persistence"
+git commit -m "Step 15: Implement Typed Streaming Layer — AG-UI SSE bridge, 9 event types, RFC 6902 state delta projections, and test suite"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 15 until:
+✋ DO NOT proceed to Step 16 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

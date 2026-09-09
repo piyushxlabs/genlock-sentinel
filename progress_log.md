@@ -476,4 +476,50 @@
 - Pass
 ---
 
+---
+## Step 15 — Implement Typed Streaming Layer
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented typed AG-UI SSE streaming layer per `AGENT_MASTER_PLAN.md` Section 7, Section 10 Step 15, and `INTERFACE_OBSERVABILITY_SYSTEM.md` Section 2 & 2a:
+  - Created `backend/src/ui/event_types.py` with strict Pydantic V2 models (`extra="forbid"`, `strict=True`) for all 9 AG-UI event types:
+    1. `RUN_STARTED` (`runId`, `threadId`)
+    2. `STEP_STARTED` / `STEP_FINISHED` (`step_name`, `event_id` with `StepName` literals matching the 7 ADK graph nodes)
+    3. `TOOL_CALL_START`, `TOOL_CALL_ARGS`, `TOOL_CALL_END`, `TOOL_CALL_RESULT`
+    4. `REASONING_START`, `REASONING_MESSAGE_START`, `REASONING_MESSAGE_CONTENT`, `REASONING_MESSAGE_END`, `REASONING_END`
+    5. `STATE_DELTA` with `StateDeltaOp` implementing RFC 6902 JSON Patch operations
+    6. `RUN_PAUSED` (`runId`, `reason="hitl_approval_required"`)
+    7. `RUN_ERROR` (`message`, `code`)
+    8. `RUN_FINISHED` (`runId`)
+    9. Supplementary events: `SYNC_OFFSET_SAMPLE` (for live line chart metric visualization) and `STATE_SNAPSHOT` (for zero-loss reconnect full-state resynchronization)
+  - Implemented `backend/src/ui/agui_bridge.py` (`AGUIEventBridge`):
+    - Wire formatting: `format_sse_event` serializing events to SSE lines `data: <json>\n\n`.
+    - Reducer-to-JSON-Patch projection: `build_state_delta` converting state mutations into RFC 6902 JSON Patch operations matching declared reducer semantics (`append-only` at `/{field}/-`, `merge-by-key` at `/{field}/{key}`, and `last-write-wins` at `/{field}`).
+    - ADK Workflow event projection: `project_adk_event` translating native Google ADK 2.x `Event` instances into typed AG-UI events.
+    - Pub/sub subscription manager with thread-safe `asyncio.Queue` listener sets per active session.
+    - SSE streaming generator `stream_session_events` supporting immediate `: ping\n\n` header flushing, reconnect `StateSnapshotEvent` emission, periodic `: ping\n\n` keepalive frames, and optional `max_events` bound.
+  - Exported all models and `AGUIEventBridge` from `backend/src/ui/__init__.py`.
+  - Mounted `GET /sessions/{session_id}/stream` endpoint in `backend/src/main.py` returning `StreamingResponse(media_type="text/event-stream")`.
+  - Implemented comprehensive unit test suite in `backend/tests/unit/test_streaming_layer.py` with 19 tests verifying schema validation, strictness, RFC 6902 projections, SSE formatting, multi-subscriber pub/sub, ADK event projections, and live FastAPI SSE streaming (19 tests passing 100%).
+
+**Files Created:**
+- `backend/src/ui/event_types.py` — Strict Pydantic V2 schemas for all 9 AG-UI SSE streaming event types.
+- `backend/src/ui/agui_bridge.py` — AGUIEventBridge translating ADK events and state deltas to AG-UI SSE protocol.
+- `backend/tests/unit/test_streaming_layer.py` — 19-test unit test suite verifying streaming, projection, and serialization.
+
+**Files Modified:**
+- `backend/src/ui/__init__.py` — Clean exports of streaming bridge and typed event models.
+- `backend/src/main.py` — Mounted `GET /sessions/{session_id}/stream` endpoint with immediate header flushing.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_streaming_layer.py -v` passed all 19 tests in 2.12s.
+- Full test suite `uv run pytest tests/unit/ -v` passed all 102 tests across all 12 modules in 132.58s with 100% pass rate.
+- Pass
+---
+
+
 

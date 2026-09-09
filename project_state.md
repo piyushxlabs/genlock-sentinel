@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 14: Build Backend API/Server
+- **Last Completed Step:** Step 15: Implement Typed Streaming Layer
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -35,6 +35,11 @@
   - Comprehensive negative unit test suite in `backend/tests/unit/test_safety_guardrails.py` (20 tests)
   - Full FastAPI operations endpoints in `backend/src/main.py` (`/health`, `/healthz`, `/`, `/sessions/{session_id}/events/{event_id}/decision`, and `/sessions/{session_id}/stop`) with strict Pydantic V2 models, checkpoint verification, and structured audit logs
   - Comprehensive API test suite in `backend/tests/unit/test_api_server.py` (11 tests)
-  - 83 unit tests passing 100% across runner bootstrap, model configuration, state schema, reducers, checkpointing, tools, 7-node orchestration graph, reasoning loop, safety guardrails, and API server endpoints
-- **Pending Next Step:** Step 15: Implement Typed Streaming Layer
+  - Typed AG-UI SSE streaming schemas in `backend/src/ui/event_types.py` covering all 9 event types per Section 7 (`RUN_STARTED`, `STEP_STARTED`/`STEP_FINISHED`, `TOOL_CALL_*`, `REASONING_*`, `STATE_DELTA` RFC 6902 JSON Patch, `RUN_PAUSED`, `RUN_ERROR`, `RUN_FINISHED`, `SYNC_OFFSET_SAMPLE`, `STATE_SNAPSHOT`) with strict Pydantic V2 schemas (`extra="forbid"`, `strict=True`)
+  - Central AG-UI event bridge in `backend/src/ui/agui_bridge.py` (`AGUIEventBridge`) translating ADK Workflow events and state mutations to standard SSE wire lines (`data: <json>\n\n`) with thread-safe queue broadcasting
+  - Automated state delta RFC 6902 JSON Patch projection matching declared reducer semantics (`append-only`, `merge-by-key`, `last-write-wins`)
+  - Mounted SSE streaming endpoint `GET /sessions/{session_id}/stream` in `backend/src/main.py` with immediate `: ping\n\n` header flushing, reconnect `StateSnapshotEvent` support, and `max_events` bounding
+  - Comprehensive unit test suite in `backend/tests/unit/test_streaming_layer.py` (19 tests)
+  - 102 unit tests passing 100% across all 12 modules in `backend/tests/unit/`
+- **Pending Next Step:** Step 16: Implement HITL Graph-Resumption Endpoints
 - **Known Issues / Blockers:** None

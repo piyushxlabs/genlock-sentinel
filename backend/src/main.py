@@ -12,7 +12,7 @@ from typing import Any, AsyncGenerator, Dict, List, Literal, Optional
 
 import dotenv
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from google.adk import Event, Runner
 from google.adk.agents._streaming_mode import StreamingMode
 from google.adk.runners import RunConfig
@@ -29,6 +29,7 @@ from src.state.schema import (
     SessionStatus,
     utc_now_iso,
 )
+from src.ui.agui_bridge import get_event_bridge
 
 
 # ------------------------------------------------------------------------------
@@ -238,6 +239,28 @@ async def root() -> JSONResponse:
             "description": "ICVFX Frame-Sync Integrity Agent",
             "status": "online",
         }
+    )
+
+
+@app.get("/sessions/{session_id}/stream")
+async def session_stream(
+    session_id: str,
+    max_events: Optional[int] = None,
+) -> StreamingResponse:
+    """Server-Sent Events stream endpoint for live operations console synchronization.
+
+    Streams typed AG-UI events per AGENT_MASTER_PLAN.md Section 7 and
+    INTERFACE_OBSERVABILITY_SYSTEM.md Section 2 & 2a.
+    """
+    bridge = get_event_bridge()
+    return StreamingResponse(
+        bridge.stream_session_events(session_id=session_id, max_events=max_events),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

@@ -94,3 +94,11 @@ Step 4 — No deviations from spec.
 **Impact:** Provides an airtight, durable HTTP control plane connecting the frontend operations console with the ADK Workflow Runtime checkpoint database, ready for typed SSE event streaming integration in Step 15.
 ---
 
+---
+## Step 15 — Typed AG-UI SSE Streaming Layer, RFC 6902 Reducer Projections & Immediate Connection Flushing
+**Decision:** Implemented `backend/src/ui/event_types.py` defining strict Pydantic V2 models (`extra="forbid"`, `strict=True`) for all 9 AG-UI SSE event types from `AGENT_MASTER_PLAN.md` Section 7; implemented `AGUIEventBridge` in `backend/src/ui/agui_bridge.py` managing thread-safe in-memory session listener queues, translating ADK 2.x `Event` objects into typed AG-UI events, and projecting state mutations into RFC 6902 JSON Patch operations matching declared reducer semantics (`append-only`, `merge-by-key`, `last-write-wins`); ensured `stream_session_events` yields an immediate `: ping\n\n` upon client connection so Starlette/FastAPI `StreamingResponse` flushes HTTP headers immediately without deadlocking; supported zero-loss client reconnect via `StateSnapshotEvent`; and added optional `max_events` bounding for deterministic consumption and automated test verification.
+**Reason:** Strictly fulfills `AGENT_MASTER_PLAN.md` Section 7, Section 10 Step 15, and `INTERFACE_OBSERVABILITY_SYSTEM.md` Section 2 & 2a. Live ICVFX operations require a low-latency, unidirectional streaming link where the on-set supervisor can observe real-time sync-offset charts, node state chips, and Gemini reasoning traces without buffering delays. The immediate connection ping solves ASGI header-flush deadlocks during HTTP streaming connection handshakes, and RFC 6902 JSON Patch projection guarantees that the frontend console maintains an exact, authoritative replica of the backend's 10-field `GenlockSentinelState`.
+**Impact:** Delivers an authoritative, typed real-time streaming infrastructure connecting the backend agent runtime to the React/Shadcn/UI operations console over SSE, laying the foundation for HITL graph-resumption endpoints in Step 16 and Generative UI components in Step 17.
+---
+
+
