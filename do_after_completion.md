@@ -1,6 +1,6 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 21 COMPLETION CHECKLIST
-# Cockpit Scroll Affordance & Visual Card Peeking
+# Cockpit Scroll Affordance, Card Peeking & Flex Shrink Protection
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
@@ -28,27 +28,27 @@
     ```
     Expected: `.cockpit-scroll::-webkit-scrollbar`, `.cockpit-scroll::-webkit-scrollbar-thumb`
 
-[ ] Verify scroll affordance micro-badge in `frontend/src/App.tsx`:
+[ ] Verify `.shrink-0` wrapper in `frontend/src/App.tsx`:
     ```powershell
-    Get-Content "A:\Projects\GENLOCK SENTINEL\frontend\src\App.tsx" | Select-String "Scrollable Feed"
+    Get-Content "A:\Projects\GENLOCK SENTINEL\frontend\src\App.tsx" | Select-String "shrink-0"
     ```
-    Expected: `Scrollable Feed ↕`
+    Expected: Three `shrink-0` divs wrapping `DiagnosisBadge`, `EvidenceCard`, and `RemediationLog`.
 
-[ ] Verify card height capping in `frontend/src/components/DiagnosisBadge.tsx`:
+[ ] Verify natural height on `DiagnosisBadge` in `frontend/src/components/DiagnosisBadge.tsx`:
     ```powershell
     Get-Content "A:\Projects\GENLOCK SENTINEL\frontend\src\components\DiagnosisBadge.tsx" | Select-String "320px"
     ```
-    Expected: `maxHeight: "320px"` on both active and standby panels.
+    Expected: No occurrences (320px constraint removed).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `frontend/src/index.css` — Custom `.cockpit-scroll` cyberpunk scrollbar styling with 6px cyan thumb, `max-height: 680px`, and 12px gap.
-[ ] File: `frontend/src/App.tsx` — Applied `.cockpit-scroll` class to right-column container and added glowing `"Scrollable Feed ↕"` micro-badge.
-[ ] File: `frontend/src/components/DiagnosisBadge.tsx` — Capped `DiagnosisBadge` and `DiagnosisStandbyPanel` height at `320px` with internal scroll so `EvidenceCard` peeks into view automatically.
-[ ] Feature: Cyberpunk Scroll Affordance — Custom slim scrollbar matching deep carbon / cyan theme.
-[ ] Feature: Visual Card Peeking — First card constrained to 320px, signaling more observability content below.
+[ ] File: `frontend/src/index.css` — Custom `.cockpit-scroll` cyberpunk scrollbar, `.shrink-0` utility rule, and `gap: 16px` on `.cockpit-col-right`.
+[ ] File: `frontend/src/App.tsx` — Applied `.cockpit-scroll` class, wrapped cards in `shrink-0` (`flex-shrink: 0`) wrappers, and added glowing `"Scrollable Feed ↕"` micro-badge header.
+[ ] File: `frontend/src/components/DiagnosisBadge.tsx` — Removed forced `maxHeight` constraints from both active `DiagnosisBadge` and `DiagnosisStandbyPanel` for full natural rendering.
+[ ] Feature: Flex Shrink Protection — Cards never squash or collapse into unreadable strips inside the flex scroll container.
+[ ] Feature: Visual Card Peeking — Natural card height allows `EvidenceCard` to peek cleanly below `DiagnosisBadge`.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -82,9 +82,9 @@ npm run dev
 Test 4 — Functional UI Check:
 Open `http://localhost:3000/` in browser:
 ✅ Expected:
-1. Right column displays `"Scrollable Feed ↕"` glowing badge at top right.
-2. `DiagnosisBadge` standby sensor panel sits ≤ 320px height.
-3. Top header of `EvidenceCard` (Node 2 Observability) peeks into view below it.
+1. `DiagnosisBadge` standby sensor panel renders at full natural height (header, brainwave SVG, and model telemetry table are completely readable and un-squashed).
+2. Right column displays `"Scrollable Feed ↕"` glowing badge at top right.
+3. Top header of `EvidenceCard` (Node 2 Observability) peeks into view below `DiagnosisBadge`.
 4. Right column scrolls smoothly with custom 6px slim cyan scrollbar.
 
 Test 5 — Security Check:
@@ -102,7 +102,7 @@ Test 5 — Security Check:
 
 ```powershell
 git add .
-git commit -m "Step 21: UI Polish — Cockpit scroll affordance and card peeking"
+git commit -m "Step 21: UI Polish — Fix squashed DiagnosisBadge with flex-shrink-0 protection"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

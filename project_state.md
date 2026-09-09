@@ -65,7 +65,7 @@
   - Synthetic drift simulator `backend/scripts/simulate_drift.py` auto-dispatching via `httpx` to active console sessions with fresh event ID generation
   - Full real-time `AGUIEventBridge` instrumented execution in `run_reasoning_loop` streaming `SYNC_OFFSET_SAMPLE`, `STEP_STARTED`/`STEP_FINISHED`, `TOOL_CALL_*`, `REASONING_*` Gemini tokens, RFC 6902 `STATE_DELTA`, and `RUN_PAUSED` directly to frontend console
   - Authoritative Production Readiness & Final Audit Evaluation Suite in `backend/tests/evals/test_production_readiness.py` (14 tests covering all 6 Section 9.5 failure simulations, all 5 Section 9.6 non-negotiable verification requirements, and all 3 Section 2 production configuration and credential leak audits)
-  - 209 automated tests passing 100% (146 unit tests + 63 evaluation, red-team, e2e, and production readiness tests) across backend
-  - Hollywood ICVFX Cockpit layout and scroll affordance (`.cockpit-scroll`, `max-height: 680px`, glowing `Scrollable Feed ↕` micro-badge, and 320px `DiagnosisBadge` card peeking)
+  - Hollywood ICVFX Cockpit layout, scroll affordance (`.cockpit-scroll`, `max-height: 680px`, glowing `Scrollable Feed ↕` micro-badge), and `shrink-0` flex-shrink protection on all right-column cards
 - **Pending Next Step:** None — All 21 Steps Complete & System Production-Ready!
 - **Known Issues / Blockers:** None
+

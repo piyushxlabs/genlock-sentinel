@@ -188,8 +188,8 @@ Step 4 — No deviations from spec.
 ---
 
 ---
-## Step 21 — Cockpit Scroll Affordance & Automatic Card Peeking
-**Decision:** Configured right-column container `.cockpit-col-right` with `max-height: 680px`, custom slim cyberpunk scrollbar `.cockpit-scroll` (`6px` width, cyan `#06b6d4` thumb with hover illumination), and capped `DiagnosisBadge` / `DiagnosisStandbyPanel` at `maxHeight: 320px` with internal scroll. Added an ambient `"Scrollable Feed ↕"` micro-badge at the header.
-**Reason:** Ensures that when judges or operators view the console, the top edge of `EvidenceCard` (Node 2 Observability) peeks into view automatically below `DiagnosisBadge`, visually signaling that deeper diagnostic evidence is available in the right-column feed while maintaining a locked 100dvh viewport height.
-**Impact:** Eliminates layout ambiguity, enhances scroll affordance, and prevents content clipping across high-density ICVFX console displays.
+## Step 21 — Cockpit Scroll Affordance, Card Peeking & Flex Shrink Protection
+**Decision:** Configured right-column container `.cockpit-col-right` with `max-height: 680px`, custom slim cyberpunk scrollbar `.cockpit-scroll` (`6px` width, cyan `#06b6d4` thumb with hover illumination), and wrapped all three child cards (`DiagnosisBadge`, `EvidenceCard`, `RemediationLog`) in explicit `.shrink-0` (`flex-shrink: 0`) containers. Removed artificial `maxHeight: 320px` capping so that the header, brainwave SVG, model parameters, and reasoning traces render at their full natural height without vertical compression.
+**Reason:** In CSS flex column containers with constrained height, child items default to `flex-shrink: 1`, which compressed `DiagnosisBadge` into an unreadable squashed strip. Adding `flex-shrink: 0` ensures each card preserves its full designed dimensions and layout integrity while allowing the parent `.cockpit-scroll` container to scroll smoothly.
+**Impact:** Completely resolves card squashing bugs, provides natural card heights, and ensures the top edge of `EvidenceCard` peeks cleanly beneath `DiagnosisBadge` in the scrollable right column.
 ---

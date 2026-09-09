@@ -792,29 +792,30 @@
 ---
 
 ---
-## Step 21 — Cockpit Scroll Affordance & Visual Card Peeking
+## Step 21 — Cockpit Scroll Affordance, Card Peeking & Flex Shrink Protection
 **Date:** September 9, 2026
 **Status:** Complete
 
 **What was implemented:**
 - Added custom cyberpunk slim scrollbar styling `.cockpit-scroll` in `frontend/src/index.css` with 6px width, `rgba(15, 23, 42, 0.6)` track, `rgba(6, 182, 212, 0.4)` cyan thumb with border, and `rgba(6, 182, 212, 0.8)` hover glow.
-- Configured right-column container `.cockpit-col-right` with `max-height: 680px`, `overflow-y: auto`, `gap: 12px`, and `padding-right: 8px`.
+- Configured right-column container `.cockpit-col-right` with `max-height: 680px`, `overflow-y: auto`, `gap: 16px`, and `padding-right: 8px`.
+- Wrapped all three right-hand cards (`DiagnosisBadge`, `EvidenceCard`, `RemediationLog`) in `<div className="shrink-0" style={{ flexShrink: 0 }}>` containers, eliminating flex collapsing/squashing and ensuring cards render at full natural height.
+- Removed artificial `maxHeight: "320px"` constraints from `DiagnosisBadge` and `DiagnosisStandbyPanel` in `frontend/src/components/DiagnosisBadge.tsx`, allowing header, brainwave SVG, model parameters table, and reasoning tokens to render cleanly without clipping.
 - Added subtle glowing micro-badge affordance at top-right header of right column feed in `frontend/src/App.tsx`: `<span className="text-[10px] font-mono text-cyan-400/70 uppercase tracking-wider">Scrollable Feed ↕</span>`.
-- Capped `DiagnosisBadge` and `DiagnosisStandbyPanel` in `frontend/src/components/DiagnosisBadge.tsx` at `maxHeight: 320px` with internal scroll/overflow management so the top edge of `EvidenceCard` peeks into view automatically, visually signaling judges that more observability content exists below.
-- Verified TypeScript compilation and bundling via `pnpm build` (`tsc && vite build`: zero errors in 2.44s).
+- Verified TypeScript compilation and bundling via `pnpm build` (`tsc && vite build`: zero errors in 2.56s).
 
 **Files Created:**
 - None
 
 **Files Modified:**
-- `frontend/src/index.css` — Added `.cockpit-scroll` custom scrollbar classes and updated `.cockpit-col-right` max-height to 680px.
-- `frontend/src/App.tsx` — Applied `cockpit-scroll` class and added `"Scrollable Feed ↕"` micro-badge header.
-- `frontend/src/components/DiagnosisBadge.tsx` — Capped `DiagnosisBadge` and `DiagnosisStandbyPanel` height to 320px for automatic card peeking.
+- `frontend/src/index.css` — Added `.cockpit-scroll` custom scrollbar classes, `.shrink-0` utility rule, and updated `.cockpit-col-right`.
+- `frontend/src/App.tsx` — Applied `cockpit-scroll` class, wrapped cards in `shrink-0` flex containers, and added `"Scrollable Feed ↕"` micro-badge header.
+- `frontend/src/components/DiagnosisBadge.tsx` — Removed forced `maxHeight` constraints from `DiagnosisBadge` and `DiagnosisStandbyPanel`.
 
 **Packages Installed:**
 - None
 
 **Verification Result:**
-- `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed in 2.44s.
+- `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed in 2.56s.
 - Pass
 ---

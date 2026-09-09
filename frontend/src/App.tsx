@@ -387,9 +387,15 @@ export const App: React.FC = () => {
             </span>
           </div>
 
-          <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
-          <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
-          <RemediationLog logs={state.remediation_log} />
+          <div className="shrink-0" style={{ flexShrink: 0 }}>
+            <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
+          </div>
+          <div className="shrink-0" style={{ flexShrink: 0 }}>
+            <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
+          </div>
+          <div className="shrink-0" style={{ flexShrink: 0 }}>
+            <RemediationLog logs={state.remediation_log} />
+          </div>
         </div>
       </div>
 

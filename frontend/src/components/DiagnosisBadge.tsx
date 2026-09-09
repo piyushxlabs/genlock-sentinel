@@ -32,14 +32,7 @@ export const DiagnosisBadge: React.FC<DiagnosisBadgeProps> = ({
   const pct = Math.round(confidence * 100);
 
   return (
-    <div
-      className="glass-panel cockpit-scroll"
-      style={{
-        padding: "16px 20px",
-        maxHeight: "320px",
-        overflowY: "auto",
-      }}
-    >
+    <div className="glass-panel" style={{ padding: "20px" }}>
       <div
         style={{
           display: "flex",
@@ -203,7 +196,7 @@ export const DiagnosisBadge: React.FC<DiagnosisBadgeProps> = ({
 /* ─────────────────────────────────────────────────────────────────────── */
 const DiagnosisStandbyPanel: React.FC = () => {
   return (
-    <div className="glass-panel" style={{ padding: "16px 20px", maxHeight: "320px", overflow: "hidden" }}>
+    <div className="glass-panel" style={{ padding: "20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
         <Brain size={17} color="var(--color-cyan)" />
         <div>
