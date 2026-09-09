@@ -12,7 +12,7 @@
 [![Google ADK 2.8.0](https://img.shields.io/badge/Google_ADK-2.8.0_Workflow_Runtime-34A853?style=for-the-badge&logo=google&logoColor=white)](https://cloud.google.com/vertex-ai)
 [![Grafana Labs MCP Native](https://img.shields.io/badge/Grafana_MCP-Loki_%7C_Tempo_%7C_Prometheus-F46800?style=for-the-badge&logo=grafana&logoColor=white)](https://grafana.com/oss/mcp/)
 [![Google Model Armor](https://img.shields.io/badge/Security-Model_Armor_(OWASP_LLM01_%26_LLM02)-EA4335?style=for-the-badge&logo=shield&logoColor=white)](https://cloud.google.com/security)
-[![Tests Passing](https://img.shields.io/badge/Tests-227%2F227_Passing_(100%25)-10B981?style=for-the-badge&logo=pytest&logoColor=white)](./backend/tests/)
+[![Tests Passing](https://img.shields.io/badge/Tests-228%2F228_Passing_(100%25)-10B981?style=for-the-badge&logo=pytest&logoColor=white)](./backend/tests/)
 [![Cloud SQL PostgreSQL](https://img.shields.io/badge/Cloud_SQL-PostgreSQL_(asyncpg_Durability)-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://cloud.google.com/sql/docs/postgres)
 [![AG-UI Protocol](https://img.shields.io/badge/AG--UI-RFC_6902_JSON_Patch_SSE-06B6D4?style=for-the-badge&logo=fastapi&logoColor=white)](https://github.com/ag-ui/ag-ui)
 [![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge)](./LICENSE)
@@ -106,27 +106,48 @@ Genlock Sentinel demonstrates native, bi-directional integration with Grafana Cl
 
 <div align="center">
 
-### 1. Autonomous Self-Healing via Node 4 (Sub-Second Recovery)
-<img src="./assets/dashboard_autonomous_healing.png" alt="Autonomous Self-Healing via Node 4" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
-<p><em>Node 4 dispatches pre-approved reversible failover for <code>render-07</code> (185.4µs sync drift) back below the 150µs perimeter within 480ms without human intervention.</em></p>
+### Showcase 1: Hollywood Carbon Cockpit Overview
+<img src="./assets/dashboard_carbon_cockpit_full.png" alt="Hollywood Carbon Cockpit Overview" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
+<p><em>Full operations dashboard featuring 16-node LED cluster radar (R01–R16), live $1,800/min nuclear burn ticker, real-time sync-offset microsecond area chart with 150µs breach line, and 7-node AG-UI workflow bus.</em></p>
 
 ---
 
-### 2. Enterprise Human-in-the-Loop (HITL) Approval Gate
+### Showcase 2: Autonomous Self-Healing via Node 4 (Sub-Second Recovery)
+<img src="./assets/dashboard_autonomous_healing.png" alt="Autonomous Self-Healing via Node 4" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
+<p><em>Node 4 dispatches pre-approved reversible failover for <code>render-07</code> (185.4µs sync drift) back below the 150µs perimeter within 480ms without human intervention, maintaining active live camera rolling state.</em></p>
+
+---
+
+### Showcase 3: Enterprise Human-in-the-Loop (HITL) Approval Gate
 <img src="./assets/dashboard_hitl_approval_modal.png" alt="Enterprise Human-in-the-Loop Approval Gate" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
 <p><em>Non-dismissible supervisor sign-off modal for high-stakes drift on <code>render-12</code>, displaying financial risk ($2,450 halt estimate), visual impact score (9.0/10), and binary Approve/Deny controls.</em></p>
 
 ---
 
-### 3. Silence-Over-Guessing & Telemetry Gap Protocol
+### Showcase 4: Silence-Over-Guessing & Telemetry Gap Protocol
 <img src="./assets/dashboard_silence_over_guessing.png" alt="Silence-Over-Guessing Protocol" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
 <p><em>When Loki telemetry drops out, the engine sets <code>logs_available: false</code> and routes to ambiguous classification without fabricating log lines, exposing live Gemini 3.1 Pro thinking tokens.</em></p>
 
 ---
 
-### 4. Hollywood Carbon Cockpit Overview
-<img src="./assets/dashboard_carbon_cockpit_full.png" alt="Hollywood Carbon Cockpit Overview" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
-<p><em>Full operations dashboard featuring 16-node LED cluster radar (R01–R16), live $1,800/min nuclear burn ticker, real-time sync-offset microsecond chart, and AG-UI event bus.</em></p>
+### Showcase 5: Live Grafana Cloud Loki Telemetry Ingestion
+<img src="./assets/grafana_cloud_mcp_explorer.png" alt="Grafana Cloud Loki Live Telemetry Ingestion" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
+<p><em>Real-time Grafana Cloud (<code>magentaparfait3455.grafana.net</code>) Loki log stream explorer with active LogQL <code>{cluster="ndisplay"}</code> telemetry ingestion, volume histograms, and PTP sync jitter diagnostics.</em></p>
+
+---
+
+### Showcase 6: Google Cloud SQL PostgreSQL Enterprise Instance
+<img src="./assets/cloudsql_postgres_instance.png" alt="Google Cloud SQL PostgreSQL Instance" width="100%" style="border-radius: 8px; border: 1px solid #1e293b;" />
+<p><em>Enterprise-tier Google Cloud SQL PostgreSQL 16 instance (<code>genlock-sentinel-db</code> in <code>us-central1</code>) providing durable session checkpointing, optimistic concurrency control, and zero-loss recovery.</em></p>
+
+---
+
+### Showcase 7: Broadcast HUD Telemetry Waveform & Pristine Baseline Reset
+<div align="center">
+  <img src="./assets/dashboard_hud_telemetry_waveform.png" alt="Broadcast HUD Telemetry Waveform" width="49%" style="border-radius: 8px; border: 1px solid #1e293b;" />
+  <img src="./assets/dashboard_pristine_baseline_reset.png" alt="Pristine Baseline Stage Reset" width="49%" style="border-radius: 8px; border: 1px solid #1e293b;" />
+</div>
+<p><em>Left: Broadcast HUD rendering high-density microsecond telemetry radar and real-time PTP jitter waveforms. Right: Instant one-click stage reset restoring all 16 render nodes to nominal baseline.</em></p>
 
 </div>
 
@@ -327,7 +348,7 @@ if last_error:
 
 ---
 
-## 🔬 Automated Test Suite & Evaluation Matrix (227 / 227 Passing)
+## 🔬 Automated Test Suite & Evaluation Matrix (228 / 228 Passing)
 
 Genlock Sentinel is backed by an exhaustive, multi-tier test suite validating functional correctness, model grounding, durability, and resilience against adversarial injection attacks:
 
@@ -346,7 +367,7 @@ cd backend && uv run pytest tests/ -v
 | **7-Node Graph Topology** | `tests/unit/test_graph.py` | Edge connectivity, isolated nodes, deterministic routing | 18 | 0 | ✅ Pass |
 | **Multi-Step Reasoning Loop** | `tests/unit/test_reasoning_loop.py` | Cycle caps (1 pass/event), backoff, circuit breakers | 17 | 0 | ✅ Pass |
 | **Safety & Model Armor** | `tests/unit/test_safety_guardrails.py` | OWASP LLM01 injection sanitization, LLM02 credential scrubbing | 20 | 0 | ✅ Pass |
-| **API Endpoints** | `tests/unit/test_api_server.py` | `/healthz`, `/stream`, `/decision`, `/stop` validation | 11 | 0 | ✅ Pass |
+| **API Endpoints** | `tests/unit/test_api_server.py` | `/healthz`, `/stream`, `/decision`, `/stop`, `/reset` validation | 12 | 0 | ✅ Pass |
 | **AG-UI SSE Streaming** | `tests/unit/test_streaming_layer.py` | RFC 6902 JSON patch deltas, wire line flushing | 19 | 0 | ✅ Pass |
 | **HITL Resumption Coordinator** | `tests/unit/test_hitl_resumption.py` | `LongRunningFunctionTool`, checkpoint resume, decision dispatch | 15 | 0 | ✅ Pass |
 | **OpenTelemetry & Cloud Trace** | `tests/unit/test_telemetry.py` | 4-level span hierarchy, GenAI attributes, score export | 27 | 0 | ✅ Pass |
@@ -357,7 +378,12 @@ cd backend && uv run pytest tests/ -v
 | **End-to-End Verification** | `tests/evals/test_e2e_verification.py` | 12/12 Section 9.4 "Agent Is Working" criteria | 16 | 0 | ✅ Pass |
 | **Production Readiness Check** | `tests/evals/test_production_readiness.py` | 6 failure simulations, AST tool segregation, secret audit | 14 | 0 | ✅ Pass |
 | **Master Delivery Verification** | `tests/evals/test_final_delivery_verification.py` | Final hackathon certification suite (Step 26) | 12 | 0 | ✅ Pass |
-| **TOTAL VERIFIED SUITE** | | **20 Suites Across Backend & Evals** | **227** | **2** | **100% PASS** |
+| **TOTAL VERIFIED SUITE** | | **20 Suites Across Backend & Evals** | **228** | **2** | **100% PASS** |
+
+<div align="center">
+  <img src="./assets/terminal_tests_228_passed.png" alt="228/228 Tests Passing Verification Terminal Output" width="100%" style="border-radius: 6px; border: 1px solid #1e293b; margin-top: 12px;" />
+  <p><em>Exhaustive test runner verification: 228 passed, 2 skipped (Cloud SQL live integration), 0 failed in 14.53s.</em></p>
+</div>
 
 > **Frontend Bundle Verification:**  
 > `pnpm --dir frontend build` compiles 1,868 modules in 2.28s with **0 TypeScript errors and 0 Vite warnings**.
@@ -446,6 +472,14 @@ uv run pytest tests/evals/test_final_delivery_verification.py -v
 ```
 - **What to Observe:** Executes 12 comprehensive certification tests verifying the 7-node topology, Node-Tool Access Matrix, Model Armor prompt injection protection, silence-over-guessing, and state invariants in ~3 seconds.
 
+#### 🔄 Reset Stage Telemetry Baseline (Between Scenarios)
+```bash
+# Reset stage back to pristine baseline (16 nominal green nodes) at any time:
+cd backend
+uv run python scripts/reset_session.py
+```
+> **Tip for Judges:** You can also click the **"RESET STAGE"** button directly on the Cockpit header (`http://localhost:3000`) at any time to instantly restore all 16 cluster nodes back to nominal baseline (0µs drift).
+
 ---
 
 ## 📂 Repository Structure
@@ -456,15 +490,21 @@ genlock-sentinel/
 │   ├── banner.png                               # Master hero banner
 │   ├── logo.png                                 # High-res ICVFX brand mark
 │   ├── demo_thumbnail.png                       # YouTube video thumbnail
-│   ├── dashboard_autonomous_healing.png         # Showcase 1: Node 4 self-healing
-│   ├── dashboard_hitl_approval_modal.png        # Showcase 2: Non-dismissible HITL modal
-│   ├── dashboard_silence_over_guessing.png      # Showcase 3: Zero-hallucination gap handling
-│   └── dashboard_carbon_cockpit_full.png        # Showcase 4: Hollywood Carbon Cockpit
+│   ├── cloudsql_postgres_instance.png           # Google Cloud SQL PostgreSQL instance
+│   ├── grafana_cloud_mcp_explorer.png           # Grafana Cloud Loki live telemetry explorer
+│   ├── dashboard_carbon_cockpit_full.png        # Full Hollywood Carbon Cockpit
+│   ├── dashboard_autonomous_healing.png         # Node 4 autonomous remediation
+│   ├── dashboard_hitl_approval_modal.png        # Non-dismissible HITL approval modal
+│   ├── dashboard_silence_over_guessing.png      # Telemetry gap zero-hallucination handling
+│   ├── dashboard_hud_telemetry_waveform.png     # Broadcast HUD telemetry waveform & radar
+│   ├── dashboard_pristine_baseline_reset.png    # 16-node nominal baseline stage reset
+│   └── terminal_tests_228_passed.png            # 228/228 test suite verification proof
 │
 ├── backend/                                     # Python 3.11+ ADK 2.x Agent Runtime
 │   ├── pyproject.toml                           # uv project manifest (74 locked dependencies)
 │   ├── scripts/
-│   │   └── simulate_drift.py                    # Real-time synthetic drift telemetry injector
+│   │   ├── simulate_drift.py                    # Real-time synthetic drift telemetry injector
+│   │   └── reset_session.py                     # Instant stage baseline reset utility
 │   │
 │   ├── src/
 │   │   ├── agents/                              # 7-node ADK Workflow graph & reasoning loop
@@ -514,8 +554,8 @@ genlock-sentinel/
 │   │   │
 │   │   └── main.py                              # FastAPI bootstrap, lifespan & endpoints
 │   │
-│   └── tests/                                   # 227 automated tests across 20 suites
-│       ├── unit/                                # 154 unit test suites
+│   └── tests/                                   # 228 automated tests across 20 suites
+│       ├── unit/                                # 155 unit test suites
 │       ├── evals/                               # LLM grounding, red-team & durability evals
 │       └── mocks/                               # Section 9.1 deterministic mock fixtures
 │
