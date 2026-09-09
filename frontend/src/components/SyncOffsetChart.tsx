@@ -422,16 +422,17 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
               strokeDasharray="5 4"
             />
             <text
-              x={PL + CW - 8}
-              y={threshY - 6}
+              x={PL + 6}
+              y={threshY - 5}
               fill="#ef4444"
-              fontSize="9.5"
+              fontSize="8.5"
               fontWeight="700"
               fontFamily="var(--font-mono)"
-              textAnchor="end"
-              letterSpacing="0.04em"
+              textAnchor="start"
+              letterSpacing="0.05em"
+              opacity={0.85}
             >
-              150µs THRESHOLD BREACH
+              150µs THRESHOLD LIMIT
             </text>
 
             {/* ── Area Gradient Fill Underneath ───────────────────────── */}
@@ -464,27 +465,44 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
               clipPath="url(#waveformClip)"
             />
 
-            {/* ── Live Endpoint Dot ────────────────────────────────────── */}
+            {/* ── Live Endpoint Dot with Native SVG Center-Locked Breathing ── */}
             {points.length > 0 && (
               <g>
                 <circle
                   cx={points[points.length - 1].x}
                   cy={points[points.length - 1].y}
-                  r={isLatestBreached ? 6 : 5}
+                  r={isLatestBreached ? 5 : 4}
                   fill={isLatestBreached ? "#ef4444" : "#06b6d4"}
                   stroke="#070A11"
                   strokeWidth={2}
+                  style={{
+                    filter: `drop-shadow(0 0 6px ${
+                      isLatestBreached ? "#ef4444" : "#06b6d4"
+                    })`,
+                  }}
                 />
                 <circle
                   cx={points[points.length - 1].x}
                   cy={points[points.length - 1].y}
-                  r={isLatestBreached ? 12 : 9}
+                  r={isLatestBreached ? 7 : 6}
                   fill="none"
                   stroke={isLatestBreached ? "#ef4444" : "#06b6d4"}
                   strokeWidth={1.5}
-                  opacity={0.65}
-                  className="pulse-active"
-                />
+                  opacity={0.7}
+                >
+                  <animate
+                    attributeName="r"
+                    values={isLatestBreached ? "5;10;5" : "4;8;4"}
+                    dur="2s"
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    values="0.8;0.2;0.8"
+                    dur="2s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
               </g>
             )}
 
@@ -502,7 +520,7 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
                   strokeDasharray="2 2"
                   opacity={0.6}
                 />
-                {/* Glowing marker dot at the highest peak */}
+                {/* Glowing solid marker dot at the highest peak */}
                 <circle
                   cx={peakPt.x}
                   cy={peakPt.y}
@@ -510,16 +528,31 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
                   fill="#ef4444"
                   stroke="#ffffff"
                   strokeWidth={1.5}
+                  style={{ filter: "drop-shadow(0 0 8px #ef4444)" }}
                 />
+                {/* Concentric native SVG pulse ring locked to peak center */}
                 <circle
                   cx={peakPt.x}
                   cy={peakPt.y}
-                  r={11}
+                  r={7}
                   fill="none"
                   stroke="#ef4444"
                   strokeWidth={1.5}
-                  className="pulse-active"
-                />
+                  opacity={0.75}
+                >
+                  <animate
+                    attributeName="r"
+                    values="5;11;5"
+                    dur="1.8s"
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    values="0.9;0.15;0.9"
+                    dur="1.8s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
 
                 {/* Floating Badge above Peak */}
                 <rect
