@@ -140,35 +140,35 @@ The orchestration engine strictly implements the 7-node ADK Workflow Runtime gra
 flowchart TD
     subgraph STAGE["🎥 Live ICVFX Stage — $1,800/min Burn"]
         direction LR
-        CAM["📷 Virtual Production Camera\nPTP IEEE 1588 Genlock"]
-        CLUSTER["🖥️ 16-Node Unreal Engine\nnDisplay Cluster R01-R16"]
+        CAM["📷 Virtual Production Camera<br/>PTP IEEE 1588 Genlock"]
+        CLUSTER["🖥️ 16-Node Unreal Engine<br/>nDisplay Cluster R01-R16"]
         CAM -->|"Genlock Pulse"| CLUSTER
     end
 
     subgraph GRAFANA["📊 Observability Plane — Grafana Cloud MCP"]
         direction LR
-        PROM["Prometheus\nsync_offset_us > 150µs"]
-        LOKI["Loki\nLogDisplayClusterEngine"]
-        TEMPO["Tempo\nDistributed Traces"]
+        PROM["Prometheus<br/>sync_offset_us > 150µs"]
+        LOKI["Loki<br/>LogDisplayClusterEngine"]
+        TEMPO["Tempo<br/>Distributed Traces"]
     end
 
     subgraph SECURITY["🛡️ Zero-Trust — Google Model Armor"]
         direction LR
-        ARMOR["Model Armor Sanitizer\nOWASP LLM01 + LLM02"]
-        GUARDS["State Invariant\nProhibition Guards"]
+        ARMOR["Model Armor Sanitizer<br/>OWASP LLM01 + LLM02"]
+        GUARDS["State Invariant<br/>Prohibition Guards"]
         ARMOR --- GUARDS
     end
 
     subgraph ADK["🤖 Google ADK 2.8.0 Workflow Runtime — 7-Node Graph"]
         direction TB
-        N1["Node 1: Stream Watch\nNon-LLM Ingestion"]
-        N2["Node 2: Evidence Triage\nGemini 3.7 Flash + MCP Tools"]
-        N3["Node 3: Root-Cause Correlation\nGemini 3.1 Pro @ temp=0.0"]
-        DECISION{"Decision Edge\nambiguous OR conf < 0.75\nOR High-Impact Action?"}
-        N4["Node 4: Autonomous Dispatch\nDeterministic Reversible Tools 4-6"]
-        N5["Node 5: HITL Card Generation\nGemini 3.7 Flash Structured Package"]
-        N6["Node 6: HITL Pause\nADK LongRunningFunctionTool"]
-        N7["Node 7: Post-Approval Handling\nDeterministic High-Stakes Tools 7-9"]
+        N1["Node 1: Stream Watch<br/>Non-LLM Ingestion"]
+        N2["Node 2: Evidence Triage<br/>Gemini 3.7 Flash + MCP Tools"]
+        N3["Node 3: Root-Cause Correlation<br/>Gemini 3.1 Pro @ temp=0.0"]
+        DECISION{"Decision Edge<br/>ambiguous OR conf < 0.75<br/>OR High-Impact Action?"}
+        N4["Node 4: Autonomous Dispatch<br/>Deterministic Reversible Tools 4-6"]
+        N5["Node 5: HITL Card Generation<br/>Gemini 3.7 Flash Structured Package"]
+        N6["Node 6: HITL Pause<br/>ADK LongRunningFunctionTool"]
+        N7["Node 7: Post-Approval Handling<br/>Deterministic High-Stakes Tools 7-9"]
         N1 -->|"active_drift_event"| N2
         N2 -->|"evidence_bundle"| N3
         N3 --> DECISION
@@ -179,21 +179,21 @@ flowchart TD
     end
 
     subgraph STORAGE["💾 Enterprise Checkpointing"]
-        DB[("Google Cloud SQL PostgreSQL\nasyncpg Session Adapter\n10-Field State and Pure Reducers")]
+        DB[("Google Cloud SQL PostgreSQL<br/>asyncpg Session Adapter<br/>10-Field State and Pure Reducers")]
     end
 
     subgraph COCKPIT["💻 Hollywood Carbon Cockpit — React 18 + Vite"]
         direction LR
-        UI_RADAR["16-Node LED Matrix\nR01-R16"]
-        UI_CHART["Sync-Offset Area Chart\n150µs Perimeter"]
-        UI_MODAL["Non-Dismissible\nHITL Approval Modal"]
-        UI_BURN["Stage Burn Ticker\n$1,800/min"]
+        UI_RADAR["16-Node LED Matrix<br/>R01-R16"]
+        UI_CHART["Sync-Offset Area Chart<br/>150µs Perimeter"]
+        UI_MODAL["Non-Dismissible<br/>HITL Approval Modal"]
+        UI_BURN["Stage Burn Ticker<br/>$1,800/min"]
     end
 
     subgraph ACTUATION["⚡ Cluster Actuation Outcomes"]
         direction LR
-        ACT_AUTO["Reversible Actuation\nfailover / resync / deprioritize"]
-        ACT_HITL["Halt Live Take\nor Greenscreen Fallback"]
+        ACT_AUTO["Reversible Actuation<br/>failover / resync / deprioritize"]
+        ACT_HITL["Halt Live Take<br/>or Greenscreen Fallback"]
     end
 
     CLUSTER -->|"Vsync Metrics"| PROM
