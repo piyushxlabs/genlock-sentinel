@@ -203,9 +203,8 @@ flowchart TD
     LOKI -->|"raw logs"| ARMOR
     TEMPO -->|"raw traces"| ARMOR
     ARMOR -->|"sanitized telemetry"| N2
-    ADK -->|"checkpoint write"| DB
-    DB -->|"session restore"| ADK
-    ADK -->|"AG-UI SSE RFC 6902 JSON Patch"| COCKPIT
+    ADK <-->|"checkpoint read/write"| DB
+    ADK -->|"AG-UI SSE stream"| COCKPIT
     COCKPIT -->|"POST decision Approve / Deny"| N6
     N4 -->|"auto-remediation"| ACT_AUTO
     N7 -->|"approved action"| ACT_HITL
