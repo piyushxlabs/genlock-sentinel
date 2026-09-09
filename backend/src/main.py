@@ -29,6 +29,8 @@ from src.state.schema import (
     SessionStatus,
     utc_now_iso,
 )
+from src.telemetry.feedback_annotations import close_feedback_client, get_feedback_client
+from src.telemetry.otlp_export import bootstrap_telemetry, shutdown_telemetry
 from src.ui.agui_bridge import get_event_bridge
 from src.ui.hitl_resumption import (
     DecisionRequest,
@@ -109,6 +111,45 @@ StopSessionRequest.model_rebuild()
 StopSessionResponse.model_rebuild()
 
 
+class FeedbackRequest(BaseModel):
+    """Payload for post-hoc supervisor diagnosis feedback (Section 7a)."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    is_correct: bool = Field(
+        ...,
+        description="True if supervisor confirms diagnosis was correct; False if incorrect.",
+    )
+    actual_root_cause: Optional[str] = Field(
+        default=None,
+        description="Free-text actual root cause — required when is_correct is False.",
+    )
+    trace_id: str = Field(
+        ...,
+        description="OTel trace ID of the Root-Cause Correlation span for this event.",
+    )
+    observation_id: Optional[str] = Field(
+        default=None,
+        description="Span/observation ID of the Root-Cause Correlation node span.",
+    )
+
+
+class FeedbackResponse(BaseModel):
+    """Acknowledgement of a feedback annotation write."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    status: str = Field(default="recorded", description="Annotation write status")
+    session_id: str = Field(..., description="Session the feedback is for")
+    event_id: str = Field(..., description="Event the feedback is for")
+    score_name: str = Field(default="diagnosis_accuracy", description="Langfuse score name")
+    score_value: float = Field(..., description="Score value written (1.0 correct / 0.0 incorrect)")
+
+
+FeedbackRequest.model_rebuild()
+FeedbackResponse.model_rebuild()
+
+
 def get_streaming_mode() -> StreamingMode:
     """Returns the constitutional StreamingMode.SSE for ADK runners."""
     return StreamingMode.SSE
@@ -185,7 +226,12 @@ async def run_noop_agent(
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan context for startup and graceful shutdown."""
     configure_environment()
+    # Bootstrap OTel TracerProvider — dual export (Cloud Trace + Langfuse)
+    bootstrap_telemetry()
     yield
+    # Flush all pending spans and close HTTPX feedback client on shutdown
+    shutdown_telemetry()
+    await close_feedback_client()
 
 
 app = FastAPI(
@@ -327,10 +373,43 @@ async def stop_session(
     )
 
 
+@app.post(
+    "/sessions/{session_id}/events/{event_id}/feedback",
+    response_model=FeedbackResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def submit_feedback(
+    session_id: str,
+    event_id: str,
+    payload: FeedbackRequest,
+) -> FeedbackResponse:
+    """Records post-hoc supervisor diagnosis accuracy feedback.
+
+    Per INTERFACE_OBSERVABILITY_SYSTEM.md Section 7 & 7a:
+    - Writes a Langfuse 'diagnosis_accuracy' score (1.0=correct / 0.0=incorrect).
+    - If is_correct is False, the actual_root_cause comment is recorded alongside the score.
+    - Never raises on annotation failure — returns status='recorded' regardless.
+    """
+    client = get_feedback_client()
+    score_value = 1.0 if payload.is_correct else 0.0
+    await client.record_diagnosis_accuracy(
+        trace_id=payload.trace_id,
+        observation_id=payload.observation_id,
+        is_correct=payload.is_correct,
+        actual_root_cause=payload.actual_root_cause,
+    )
+    return FeedbackResponse(
+        status="recorded",
+        session_id=session_id,
+        event_id=event_id,
+        score_name="diagnosis_accuracy",
+        score_value=score_value,
+    )
+
+
 if __name__ == "__main__":
     print("--- Genlock Sentinel ADK Runner Bootstrap ---")
     events = asyncio.run(run_noop_agent())
     print(f"Bootstrap run completed successfully! Total Events: {len(events)}")
     for idx, evt in enumerate(events, 1):
         print(f"  [{idx}] Event author={evt.author} actions={evt.actions}")
-

@@ -114,3 +114,19 @@ Step 4 — No deviations from spec.
 **Reason:** Strictly adheres to `AGENT_MASTER_PLAN.md` Section 7, Section 10 Step 17, `AGENT_ORCHESTRATION_BLUEPRINT.md` Section 4, and `INTERFACE_OBSERVABILITY_SYSTEM.md` Sections 2, 4a, 5, and 10. In a live ICVFX virtual production stage ($800–$2,500/minute stage burn), the operations console is a mission-critical SRE instrument, not a chatbot. The on-set supervisor requires high-contrast, scannable visual indicators of telemetry spikes, grounded Gemini diagnostics, and unambiguous binary sign-offs to protect live footage from baked-in frame-sync tearing.
 **Impact:** Delivers an authoritative, production-ready frontend console that live-streams agent progress, visualizes frame-sync health in real time, renders grounded evidence and reasoning, and provides interactive HITL approval gates, ready for telemetry instrumentation in Step 18.
 ---
+
+---
+## Step 18 — OTel Global TracerProvider Override Restriction (OTel 1.42)
+**Decision:** Span unit tests use patch('src.telemetry.tracing.get_tracer', return_value=local_tracer) with a LOCAL SDKTracerProvider instead of 	race.set_tracer_provider() global override.
+**Reason:** OTel SDK version 1.42 (opentelemetry-sdk==1.42.1) prohibits overriding a TracerProvider once a non-ProxyTracerProvider is registered; attempting to do so emits a WARNING and silently leaves the old provider in place. Patching get_tracer() at the module level routes span creation to a test-local InMemorySpanExporter without touching the global state.
+**Impact:** Any future span tests must use the same _make_local_exporter_and_tracer() + patcher pattern. Do NOT use 	race.set_tracer_provider() in tests.
+
+---
+
+---
+## Step 18 — Langfuse Scores API via Pure HTTPX (No langfuse-sdk)
+**Decision:** FeedbackAnnotationClient uses httpx.AsyncClient with HTTP Basic Auth directly against POST /api/public/scores rather than importing langfuse-sdk.
+**Reason:** langfuse-sdk pulls synchronous I/O internals incompatible with the async-io-and-pydantic-validation-mandate rule. Pure HTTPX gives full async control, zero extra dependencies, and Pydantic V2 strict request schema enforcement (LangfuseScoreRequest).
+**Impact:** Langfuse SDK upgrades do not affect the annotation pipeline. Any API breaking changes in Langfuse REST Scores endpoint will require a minor update to _SCORES_PATH and LangfuseScoreRequest schema.
+
+---

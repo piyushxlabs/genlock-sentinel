@@ -36,6 +36,13 @@ from src.state.schema import (
     get_or_init_state,
     utc_now_iso,
 )
+from src.telemetry.tracing import (
+    annotate_circuit_breaker,
+    event_span,
+    mark_span_error,
+    mark_span_ok,
+    node_span,
+)
 from src.utils.errors import AgentError, StateValidationError, ToolExecutionError
 
 # In-flight and processed event trackers to enforce the strict 1-pass cycle cap
@@ -119,6 +126,7 @@ async def run_reasoning_loop(
 
     try:
         current_state = get_or_init_state(ctx)
+        session_id: str = current_state.session_id or "session-unknown"
 
         # Locate the active drift event
         target_drift: Optional[DriftEvent] = None
@@ -134,81 +142,109 @@ async def run_reasoning_loop(
 
         node_id = target_drift.node_id
 
-        # --------------------------------------------------------------------------
-        # 2. Node 2: Evidence Triage Pass
-        # --------------------------------------------------------------------------
-        triage_output = await evidence_triage_node(ctx, {"event_id": event_id})
-
-        # Screen extracted telemetry for instruction-injection attempts
-        log_summary, log_anomaly = sanitize_telemetry_input(triage_output.get("log_summary"))
-        trace_summary, trace_anomaly = sanitize_telemetry_input(triage_output.get("trace_summary"))
-
-        anomalies = []
-        if triage_output.get("anomaly"):
-            anomalies.append(str(triage_output["anomaly"]))
-        if log_anomaly:
-            anomalies.append(log_anomaly)
-        if trace_anomaly:
-            anomalies.append(trace_anomaly)
-
-        triage_bundle = {
-            "event_id": event_id,
-            "logs_available": triage_output.get("logs_available", False),
-            "log_summary": log_summary,
-            "trace_summary": trace_summary,
-            "anomaly": "; ".join(anomalies) if anomalies else None,
-        }
-
-        # --------------------------------------------------------------------------
-        # 3. Node 3: Root-Cause Correlation Pass
-        # --------------------------------------------------------------------------
-        diagnosis_output = await root_cause_correlation_node(ctx, {"event_id": event_id})
-
-        # Evaluate decision routing set by Node 3 (ctx.route)
-        route = getattr(ctx, "route", None)
-        if not route:
-            # Recompute decision edge deterministically if route was unset
-            is_ambiguous = diagnosis_output.get("category") == "ambiguous"
-            is_low_conf = float(diagnosis_output.get("confidence", 0.0)) < current_state.config.confidence_floor
-            is_breaker = check_circuit_breaker(node_id, get_or_init_state(ctx))
-            route = "hitl" if (is_ambiguous or is_low_conf or is_breaker) else "autonomous"
-
-        # --------------------------------------------------------------------------
-        # 4. Routing: Autonomous Remediation vs HITL Escalation
-        # --------------------------------------------------------------------------
-        if route == "autonomous":
-            # Step 5a: Autonomous Dispatch
-            dispatch_output = await autonomous_dispatch_node(ctx)
-            _PROCESSED_EVENT_IDS.add(event_id)
-            return ReasoningLoopResult(
+        with event_span(session_id=session_id, event_id=event_id, node_id=node_id) as evt_span:
+            # ------------------------------------------------------------------
+            # 2. Node 2: Evidence Triage Pass
+            # ------------------------------------------------------------------
+            with node_span(
+                node_name="evidence_triage",
+                model="gemini-3.7-flash",
+                session_id=session_id,
                 event_id=event_id,
-                node_id=node_id,
-                status="remediated",
-                triage_bundle=triage_bundle,
-                diagnosis=diagnosis_output,
-                remediation=dispatch_output,
-                hitl_card=None,
-                iterations=1,
-            )
-        else:
-            # Step 5b: HITL Card Generation & Pause
-            card_output = await hitl_card_generation_node(ctx)
-            _PROCESSED_EVENT_IDS.add(event_id)
-            status_desc: Literal["awaiting_approval", "ambiguous_escalated"] = (
-                "ambiguous_escalated"
-                if diagnosis_output.get("category") == "ambiguous"
-                else "awaiting_approval"
-            )
-            return ReasoningLoopResult(
+            ):
+                triage_output = await evidence_triage_node(ctx, {"event_id": event_id})
+
+            # Screen extracted telemetry for instruction-injection attempts
+            log_summary, log_anomaly = sanitize_telemetry_input(triage_output.get("log_summary"))
+            trace_summary, trace_anomaly = sanitize_telemetry_input(triage_output.get("trace_summary"))
+
+            anomalies = []
+            if triage_output.get("anomaly"):
+                anomalies.append(str(triage_output["anomaly"]))
+            if log_anomaly:
+                anomalies.append(log_anomaly)
+            if trace_anomaly:
+                anomalies.append(trace_anomaly)
+
+            triage_bundle = {
+                "event_id": event_id,
+                "logs_available": triage_output.get("logs_available", False),
+                "log_summary": log_summary,
+                "trace_summary": trace_summary,
+                "anomaly": "; ".join(anomalies) if anomalies else None,
+            }
+
+            # ------------------------------------------------------------------
+            # 3. Node 3: Root-Cause Correlation Pass
+            # ------------------------------------------------------------------
+            with node_span(
+                node_name="root_cause_correlation",
+                model="gemini-3.1-pro",
+                session_id=session_id,
                 event_id=event_id,
-                node_id=node_id,
-                status=status_desc,
-                triage_bundle=triage_bundle,
-                diagnosis=diagnosis_output,
-                remediation=None,
-                hitl_card=card_output,
-                iterations=1,
-            )
+            ):
+                diagnosis_output = await root_cause_correlation_node(ctx, {"event_id": event_id})
+
+            # Evaluate decision routing set by Node 3 (ctx.route)
+            route = getattr(ctx, "route", None)
+            if not route:
+                # Recompute decision edge deterministically if route was unset
+                is_ambiguous = diagnosis_output.get("category") == "ambiguous"
+                is_low_conf = float(diagnosis_output.get("confidence", 0.0)) < current_state.config.confidence_floor
+                is_breaker = check_circuit_breaker(node_id, get_or_init_state(ctx))
+                if is_breaker:
+                    annotate_circuit_breaker(evt_span, node_id)
+                route = "hitl" if (is_ambiguous or is_low_conf or is_breaker) else "autonomous"
+
+            # ------------------------------------------------------------------
+            # 4. Routing: Autonomous Remediation vs HITL Escalation
+            # ------------------------------------------------------------------
+            if route == "autonomous":
+                # Step 5a: Autonomous Dispatch
+                with node_span(
+                    node_name="autonomous_dispatch",
+                    session_id=session_id,
+                    event_id=event_id,
+                ):
+                    dispatch_output = await autonomous_dispatch_node(ctx)
+                _PROCESSED_EVENT_IDS.add(event_id)
+                mark_span_ok(evt_span, "remediated")
+                return ReasoningLoopResult(
+                    event_id=event_id,
+                    node_id=node_id,
+                    status="remediated",
+                    triage_bundle=triage_bundle,
+                    diagnosis=diagnosis_output,
+                    remediation=dispatch_output,
+                    hitl_card=None,
+                    iterations=1,
+                )
+            else:
+                # Step 5b: HITL Card Generation & Pause
+                with node_span(
+                    node_name="hitl_card_generation",
+                    model="gemini-3.7-flash",
+                    session_id=session_id,
+                    event_id=event_id,
+                ):
+                    card_output = await hitl_card_generation_node(ctx)
+                _PROCESSED_EVENT_IDS.add(event_id)
+                status_desc: Literal["awaiting_approval", "ambiguous_escalated"] = (
+                    "ambiguous_escalated"
+                    if diagnosis_output.get("category") == "ambiguous"
+                    else "awaiting_approval"
+                )
+                mark_span_ok(evt_span, status_desc)
+                return ReasoningLoopResult(
+                    event_id=event_id,
+                    node_id=node_id,
+                    status=status_desc,
+                    triage_bundle=triage_bundle,
+                    diagnosis=diagnosis_output,
+                    remediation=None,
+                    hitl_card=card_output,
+                    iterations=1,
+                )
 
     except Exception as exc:
         _PROCESSED_EVENT_IDS.add(event_id)

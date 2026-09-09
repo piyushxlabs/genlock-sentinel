@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 17: Build Interface Layer & Generative UI Components
+- **Last Completed Step:** Step 18: Integrate Telemetry & Observability
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -50,6 +50,12 @@
   - All 7 Generative UI components implemented per Section 4a: `SyncOffsetChart.tsx`, `StepTracker.tsx`, `EvidenceCard.tsx`, `DiagnosisBadge.tsx`, `ApprovalCardModal.tsx`, `RemediationLog.tsx`, and `FailureBanner.tsx`
   - Main operations console dashboard in `frontend/src/App.tsx` with live stage burn counter ($1,800/min), emergency stop button, split view layout, and modal approval overlay
   - Production bundle verified via `pnpm build` (`tsc && vite build`: 1868 modules transformed in 2.19s, zero errors)
-  - 115 backend unit tests passing 100% across all 13 modules in `backend/tests/unit/`
-- **Pending Next Step:** Step 18: Integrate Telemetry & Observability
+  - 141 backend unit tests passing 100% across all 14 modules in `backend/tests/unit/`
+  - OTel GenAI 4-level span hierarchy: session → event → node → tool with `gen_ai.*` semantic convention attributes
+  - Dual-export OTLP TracerProvider: gRPC to Cloud Trace + HTTP/Basic Auth to Langfuse; graceful degradation to BatchSpanProcessor-only when credentials absent
+  - Feedback annotation client (`FeedbackAnnotationClient`) writing `diagnosis_accuracy` and `hitl_decision` Langfuse REST Scores for Section 7a evaluation pipeline
+  - `POST /sessions/{session_id}/events/{event_id}/feedback` endpoint for supervisor post-hoc diagnosis labelling
+  - `bootstrap_telemetry()` and `shutdown_telemetry()` wired into FastAPI lifespan
+  - All 7 reasoning loop nodes wrapped with `node_span()` and `event_span()` context managers
+- **Pending Next Step:** Step 19: Adversarial Testing & Red-Team Validation
 - **Known Issues / Blockers:** None

@@ -602,3 +602,23 @@
 - Pass
 ---
 
+
+---
+## Step 18 — Integrate Telemetry & Observability
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Created backend/src/telemetry/tracing.py: 4-level OTel GenAI span hierarchy with context managers and span helper functions.
+- Created backend/src/telemetry/otlp_export.py: Dual-export TracerProvider bootstrap (Cloud Trace gRPC + Langfuse HTTP/Basic Auth) with graceful degradation.
+- Created backend/src/telemetry/feedback_annotations.py: Langfuse REST Scores annotation client for diagnosis_accuracy and hitl_decision per Section 7a.
+- Updated backend/src/telemetry/__init__.py: Full public re-export __all__.
+- Modified backend/src/agents/reasoning_loop.py: node_span() wrappers for Nodes 2-5 + circuit breaker annotation + event_span() per drift event.
+- Modified backend/src/main.py: bootstrap_telemetry() in lifespan startup; shutdown in lifespan teardown; POST /feedback endpoint.
+- Created backend/tests/unit/test_telemetry.py: 26 unit tests all passing.
+
+**Verification Result:**
+- 26/26 test_telemetry.py passed; 141/141 tests/unit/ passed (zero regressions)
+- Pass
+---
+

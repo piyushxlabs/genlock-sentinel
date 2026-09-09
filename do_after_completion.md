@@ -1,122 +1,118 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 17 COMPLETION CHECKLIST
-# Build Interface Layer & Generative UI Components
+# STEP 18 COMPLETION CHECKLIST
+# Integrate Telemetry & Observability
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify the frontend production bundle builds cleanly with TypeScript validation:
-    ```powershell
-    cd "a:\Projects\GENLOCK SENTINEL\frontend"
-    pnpm build
+[ ] Confirm all 4 telemetry files exist in backend/src/telemetry/
     ```
-    Expected: `tsc && vite build` completes in < 3s, outputting `dist/index.html` and `dist/assets/` with 0 errors.
+    dir "A:\Projects\GENLOCK SENTINEL\backend\src\telemetry\"
+    ```
+    Expected: __init__.py, tracing.py, otlp_export.py, feedback_annotations.py
 
-[ ] Verify the frontend component test suite passes:
-    ```powershell
-    cd "a:\Projects\GENLOCK SENTINEL\frontend"
-    pnpm exec tsc --noEmit
-    ```
-    Expected: TypeScript checks pass with 0 errors.
+[ ] Confirm the feedback endpoint is visible in FastAPI docs
+    Start server: `cd backend; uv run uvicorn src.main:app --reload`
+    Open: http://localhost:8000/docs
+    Expected: POST /sessions/{session_id}/events/{event_id}/feedback listed
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Verify backend unit tests remain 100% passing across all 13 modules:
-    ```powershell
-    cd "a:\Projects\GENLOCK SENTINEL\backend"
+[ ] Run the telemetry-specific test suite
+    ```
+    cd backend
+    uv run pytest tests/unit/test_telemetry.py -v
+    ```
+    Expected: 26 passed, 0 failed
+    If wrong: Check that opentelemetry-semantic-conventions==0.63b1 is installed
+
+[ ] Run the full unit test suite to verify zero regressions
+    ```
+    cd backend
     uv run pytest tests/unit/ -q
     ```
-    Expected: `115 passed` in ~2 minutes with 100% pass rate.
+    Expected: 141 passed, 4 warnings (DeprecationWarning from ADK experimental features)
+    If wrong: Isolate failing module and check import of src.telemetry
 
-[ ] Optional manual local inspection of the console:
-    ```powershell
-    # In terminal 1 (backend):
-    cd "a:\Projects\GENLOCK SENTINEL\backend"
-    uv run uvicorn src.main:app --port 8000
-
-    # In terminal 2 (frontend):
-    cd "a:\Projects\GENLOCK SENTINEL\frontend"
-    pnpm dev
+[ ] Verify tracing module exports are complete
     ```
-    Expected: Vite server starts at `http://localhost:3000`. Opening the URL displays the dark-themed ICVFX Operations Console with the real-time telemetry chart, 7-node step tracker, and stage burn counter.
+    cd backend
+    uv run python -c "from src.telemetry import bootstrap_telemetry, session_span, node_span, get_feedback_client; print('OK')"
+    ```
+    Expected: OK
+    If wrong: Check __init__.py for missing __all__ entries
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `frontend/index.html` — Operations console HTML shell with Inter & JetBrains Mono fonts and dark theme.
-[ ] File: `frontend/vite.config.ts` — Vite 5 build configuration with `@vitejs/plugin-react` and `/sessions` backend proxy.
-[ ] File: `frontend/tsconfig.json` — Strict TypeScript compiler configuration for React 18 and bundler resolution.
-[ ] File: `frontend/src/index.css` — Custom ICVFX design system with glassmorphism cards, confidence meters, and modal styles.
-[ ] File: `frontend/src/main.tsx` — React 18 DOM mount bootstrap.
-[ ] File: `frontend/src/App.tsx` — Main operations console dashboard with stage burn rate counter, emergency stop button, split layout, and modal approval overlay.
-[ ] File: `frontend/src/stream/agui-client.ts` — Typed AG-UI SSE client with auto-reconnect, `STATE_SNAPSHOT` synchronization, and RFC 6902 state delta patching for all declared reducers.
-[ ] File: `frontend/src/components/SyncOffsetChart.tsx` — Real-time SVG time-series telemetry chart with 150µs threshold line and breach alerts.
-[ ] File: `frontend/src/components/StepTracker.tsx` — Visual 7-node ADK Workflow Runtime graph pipeline tracker.
-[ ] File: `frontend/src/components/EvidenceCard.tsx` — Dual-panel Loki logs and Tempo traces viewer with anomaly alert banner and copy buttons.
-[ ] File: `frontend/src/components/DiagnosisBadge.tsx` — Gemini 3.1 Pro root-cause diagnosis badge with horizontal confidence magnitude meter and expandable native reasoning panel.
-[ ] File: `frontend/src/components/ApprovalCardModal.tsx` — Non-dismissible full-screen modal overlay for pending HITL supervisor sign-off with stage burn context ($800–$2,500/min), visual impact score, root-cause summary, and discrete Approve/Deny buttons.
-[ ] File: `frontend/src/components/RemediationLog.tsx` — Chronological timeline list of executed remediation tools and supervisor decisions.
-[ ] File: `frontend/src/components/FailureBanner.tsx` — Persistent system failure banner surfaced on `RUN_ERROR`.
-[ ] File: `frontend/tests/verify_components.ts` — Component contracts and state delta projection verification suite.
-[ ] Package: `@vitejs/plugin-react@4.7.0` — Required for React 18 JSX transformation in Vite 5.
+[ ] File: `backend/src/telemetry/tracing.py` — 4-level OTel GenAI span hierarchy (session/event/node/tool) with gen_ai.* attribute keys, helpers: record_token_usage(), mark_span_error(), mark_span_ok(), annotate_hitl_decision(), annotate_circuit_breaker(), annotate_state_delta()
+[ ] File: `backend/src/telemetry/otlp_export.py` — Dual-export TracerProvider: OTLP/gRPC to Cloud Trace + OTLP/HTTP Basic Auth to Langfuse; BatchSpanProcessor; bootstrap_telemetry() idempotent; graceful degradation if env vars absent
+[ ] File: `backend/src/telemetry/feedback_annotations.py` — FeedbackAnnotationClient async HTTPX REST client writing diagnosis_accuracy (1.0/0.0) and hitl_decision (1.0/0.0) scores to Langfuse /api/public/scores; no-op when LANGFUSE_PUBLIC_KEY absent
+[ ] File: `backend/src/telemetry/__init__.py` — Full __all__ public re-export surface
+[ ] File: `backend/tests/unit/test_telemetry.py` — 26 unit tests (bootstrap, graceful degradation, span hierarchy, token attrs, HITL/circuit annotations, score writes, no-op, HTTP error swallowing, feedback endpoint, module exports)
+[ ] Feature: OTel spans in reasoning loop — Nodes 2/3/4/5 wrapped with node_span(); event_span() per drift event
+[ ] Feature: FastAPI lifespan telemetry — bootstrap_telemetry() on startup; shutdown_telemetry() + close_feedback_client() on shutdown
+[ ] Endpoint: POST /sessions/{session_id}/events/{event_id}/feedback — Supervisor post-hoc diagnosis labelling
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Test 1 — Files Exist:
-```powershell
-Get-Item "frontend/src/App.tsx", "frontend/src/components/*.tsx", "frontend/src/stream/agui-client.ts" | Select-Object Name, Length
 ```
-✅ Expected: All 7 components, App.tsx, and agui-client.ts appear with non-zero size.
-❌ If missing: Recreate missing component file.
-
-Test 2 — Environment / Dependencies:
-```powershell
-cd "a:\Projects\GENLOCK SENTINEL\frontend"
-pnpm list
+dir "A:\Projects\GENLOCK SENTINEL\backend\src\telemetry\"
+dir "A:\Projects\GENLOCK SENTINEL\backend\tests\unit\test_telemetry.py"
 ```
-✅ Expected: `@ag-ui/client`, `react`, `react-dom`, `lucide-react`, `@vitejs/plugin-react`, `typescript`, `vite` all listed.
-❌ If errors: Run `pnpm install` in `frontend/`.
+✅ Expected: tracing.py, otlp_export.py, feedback_annotations.py, __init__.py + test_telemetry.py
+❌ If missing: Re-run Step 18 implementation from the last confirmed checkpoint
 
-Test 3 — Production Bundle Build:
-```powershell
-cd "a:\Projects\GENLOCK SENTINEL\frontend"
-pnpm build
+Test 2 — Telemetry Module Imports:
 ```
-✅ Expected: `✓ built in ...` with `dist/index.html` and assets created.
-❌ If errors: Check TypeScript error output in terminal.
+cd backend
+uv run python -c "import src.telemetry; print(src.telemetry.__all__)"
+```
+✅ Expected: List of all exported symbols including bootstrap_telemetry, session_span, node_span, tool_span, get_feedback_client
+❌ If ImportError: Check opentelemetry-semantic-conventions version matches 0.63b1
 
-Test 4 — Functional / Interface Boundaries Check:
-[ ] Verify no chat box or free-text input exists in `frontend/src/App.tsx`.
-[ ] Verify no autonomy toggle exists (permanently Semi-Autonomous).
-[ ] Verify no manual actuator takeover buttons exist.
-✅ Expected: Pure live operations console adhering strictly to Section 10.
+Test 3 — Telemetry Tests Pass:
+```
+cd backend
+uv run pytest tests/unit/test_telemetry.py -v
+```
+✅ Expected: 26 passed, 1 warning in ~2.5s
+❌ If span tests fail: Verify patch target 'src.telemetry.tracing.get_tracer' matches actual function location
+
+Test 4 — Zero Regressions:
+```
+cd backend
+uv run pytest tests/unit/ -q
+```
+✅ Expected: 141 passed, 4 warnings
+❌ If errors: Check reasoning_loop.py imports (annotate_circuit_breaker, event_span, mark_span_error, mark_span_ok, node_span from src.telemetry.tracing)
 
 Test 5 — Security Check:
-[ ] Verify .env is in .gitignore:
-```powershell
-Get-Content .gitignore | Select-String ".env"
-```
-✅ Expected: `.env` appears in the output.
-❌ If missing: Add `.env` to `.gitignore` immediately.
+[ ] Verify .env is in .gitignore
+    ```
+    Select-String -Path "A:\Projects\GENLOCK SENTINEL\.gitignore" -Pattern "\.env"
+    ```
+    ✅ Expected: .env appears in the output
+    ❌ If missing: Add `.env` to .gitignore immediately
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 GIT COMMIT
 (Run this ONLY after all above checks pass)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-```powershell
+```
 git add .
-git commit -m "Step 17: Build Interface Layer & Generative UI Components — React 18 + Vite operations console, AG-UI SSE client, and 7 Generative UI components"
-git push origin main
+git commit -m "Step 18: Integrate Telemetry & Observability — OTel GenAI spans, dual OTLP export, Langfuse feedback scores, 141 tests passing"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 18 until:
-[ ] All tests above show ✅
+✋ DO NOT proceed to Step 19 until:
+[ ] All 4 tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
