@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 15: Implement Typed Streaming Layer
+- **Last Completed Step:** Step 17: Build Interface Layer & Generative UI Components
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -40,6 +40,16 @@
   - Automated state delta RFC 6902 JSON Patch projection matching declared reducer semantics (`append-only`, `merge-by-key`, `last-write-wins`)
   - Mounted SSE streaming endpoint `GET /sessions/{session_id}/stream` in `backend/src/main.py` with immediate `: ping\n\n` header flushing, reconnect `StateSnapshotEvent` support, and `max_events` bounding
   - Comprehensive unit test suite in `backend/tests/unit/test_streaming_layer.py` (19 tests)
-  - 102 unit tests passing 100% across all 12 modules in `backend/tests/unit/`
-- **Pending Next Step:** Step 16: Implement HITL Graph-Resumption Endpoints
+  - HITL graph-resumption coordinator in `backend/src/ui/hitl_resumption.py` (`HITLResumptionCoordinator`) with `LongRunningFunctionTool` (`hitl_supervisor_approval_tool`), pause notifications (`notify_paused`), strict checkpoint verification (`verify_checkpoint`), and post-approval dispatch (`handle_decision`)
+  - Delegated `POST /sessions/{session_id}/events/{event_id}/decision` in `backend/src/main.py` to `HITLResumptionCoordinator` with deterministic Node 7 execution and AG-UI SSE event broadcasting
+  - Hooked `hitl_pause_node` in `backend/src/agents/graph.py` to emit `RUN_PAUSED` and broadcast pending card deltas upon interrupt
+  - Comprehensive unit and integration test suite in `backend/tests/unit/test_hitl_resumption.py` (13 tests) covering all Section 9.3 eval scenarios
+  - React 18 + Vite operations console shell (`frontend/index.html`, `frontend/vite.config.ts`, `frontend/tsconfig.json`)
+  - Dedicated dark-mode ICVFX design system in `frontend/src/index.css` with glassmorphism cards, glowing badges, confidence meters, and pulse animations
+  - Typed AG-UI SSE streaming client in `frontend/src/stream/agui-client.ts` with auto-reconnect and RFC 6902 state delta patching for all declared reducers
+  - All 7 Generative UI components implemented per Section 4a: `SyncOffsetChart.tsx`, `StepTracker.tsx`, `EvidenceCard.tsx`, `DiagnosisBadge.tsx`, `ApprovalCardModal.tsx`, `RemediationLog.tsx`, and `FailureBanner.tsx`
+  - Main operations console dashboard in `frontend/src/App.tsx` with live stage burn counter ($1,800/min), emergency stop button, split view layout, and modal approval overlay
+  - Production bundle verified via `pnpm build` (`tsc && vite build`: 1868 modules transformed in 2.19s, zero errors)
+  - 115 backend unit tests passing 100% across all 13 modules in `backend/tests/unit/`
+- **Pending Next Step:** Step 18: Integrate Telemetry & Observability
 - **Known Issues / Blockers:** None

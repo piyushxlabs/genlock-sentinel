@@ -521,5 +521,84 @@
 - Pass
 ---
 
+## Step 16 — Implement HITL Graph-Resumption Endpoints
+**Date:** September 9, 2026
+**Status:** Complete
 
+**What was implemented:**
+- Created `backend/src/ui/hitl_resumption.py` implementing `HITLResumptionCoordinator` managing ADK graph pause notifications (`notify_paused`), strict checkpoint verification (`verify_checkpoint`), decision handling (`handle_decision`), and ADK `LongRunningFunctionTool` (`hitl_supervisor_approval_tool`).
+- Wired `HITLResumptionCoordinator.handle_decision` into `POST /sessions/{session_id}/events/{event_id}/decision` in `backend/src/main.py` ensuring pure delegation for checkpoint validation, state mutation, deterministic Node 7 post-approval dispatch, AG-UI SSE broadcasting, and checkpoint persistence.
+- Connected `hitl_pause_node` in `backend/src/agents/graph.py` to notify the coordinator upon graph interruption, broadcasting `RUN_PAUSED` and RFC 6902 `STATE_DELTA` events.
+- Implemented comprehensive unit and integration test suite `backend/tests/unit/test_hitl_resumption.py` (13 tests) covering all Section 9.3 eval scenarios (valid Approve resuming halt/greenscreen/failover, valid Deny with audit logging and zero actuator tools, stale checkpoint rejection, event ID mismatch rejection, modified input refusal, missing session/card rejection, RUN_PAUSED emission, and LongRunningFunctionTool declaration).
+- Updated `backend/tests/unit/test_api_server.py` to reflect post-approval completion transition to `monitoring` status.
+
+**Files Created:**
+- `backend/src/ui/hitl_resumption.py` — HITL pause/resume coordinator, checkpoint verifier, post-approval dispatcher, and LongRunningFunctionTool binding
+- `backend/tests/unit/test_hitl_resumption.py` — Comprehensive unit and integration tests covering Section 9.3 eval scenarios
+
+**Files Modified:**
+- `backend/src/main.py` — Delegated `POST /sessions/{session_id}/events/{event_id}/decision` to `HITLResumptionCoordinator.handle_decision`
+- `backend/src/agents/graph.py` — Hooked `hitl_pause_node` to notify coordinator on interrupt
+- `backend/tests/unit/test_api_server.py` — Aligned session status assertion with post-approval completion
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- All 13 tests in `backend/tests/unit/test_hitl_resumption.py` passed (100%).
+- All 115 unit tests across the entire backend suite in `backend/tests/unit/` passed (100%).
+- Pass
+---
+
+## Step 17 — Build Interface Layer & Generative UI Components
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Created modern dark-theme HTML shell `frontend/index.html` with Google Fonts (Inter, JetBrains Mono), viewport configuration, and ICVFX Operations Console branding.
+- Created `frontend/vite.config.ts` configuring `@vitejs/plugin-react` and local API proxy routing `/sessions`, `/health`, and `/healthz` to `http://127.0.0.1:8000`.
+- Configured `frontend/tsconfig.json` with strict TypeScript compiler options, React 18 JSX support, and bundler resolution.
+- Created `frontend/src/index.css` defining the custom ICVFX design system: dark-mode color palette, glassmorphism cards, confidence meters, modal overlays, emergency stop button styling, and pulse animations.
+- Implemented `frontend/src/stream/agui-client.ts` managing persistent SSE streaming connections (`/sessions/{sessionId}/stream`), auto-reconnect with initial `STATE_SNAPSHOT` synchronization, and RFC 6902 JSON Patch state delta application for all declared reducers (`append-only`, `merge-by-key`, `last-write-wins`).
+- Implemented all seven Generative UI components per Section 4a:
+  - `SyncOffsetChart.tsx`: Real-time SVG time-series chart with 150µs threshold line, node-specific color curves, and breach alerts.
+  - `StepTracker.tsx`: Visual 7-node ADK Workflow Runtime graph pipeline tracker.
+  - `EvidenceCard.tsx`: Dual-panel Loki logs and Tempo traces viewer with anomaly alert banner and copy buttons.
+  - `DiagnosisBadge.tsx`: Gemini 3.1 Pro root-cause diagnosis badge with horizontal confidence magnitude meter and expandable native reasoning panel.
+  - `ApprovalCardModal.tsx`: Non-dismissible full-screen modal overlay for pending HITL supervisor sign-off with stage burn context ($800–$2,500/min), visual impact score, root-cause summary, and discrete Approve/Deny buttons.
+  - `RemediationLog.tsx`: Chronological timeline list of executed remediation tools and supervisor decisions.
+  - `FailureBanner.tsx`: Persistent error banner surfaced on `RUN_ERROR`.
+- Implemented `frontend/src/App.tsx` main operations console dashboard with stage burn rate counter, emergency stop button, and connection status indicator.
+- Created `frontend/tests/verify_components.ts` verifying component contracts and RFC 6902 reducer projections.
+- Mounted React 18 root in `frontend/src/main.tsx`.
+
+**Files Created:**
+- `frontend/index.html` — Console HTML entry point
+- `frontend/vite.config.ts` — Vite build and proxy configuration
+- `frontend/tsconfig.json` — TypeScript compiler configuration
+- `frontend/src/index.css` — ICVFX design tokens and glassmorphism styling
+- `frontend/src/main.tsx` — React 18 mount bootstrap
+- `frontend/src/App.tsx` — Main operations console dashboard
+- `frontend/src/stream/agui-client.ts` — AG-UI SSE client and RFC 6902 delta applicator
+- `frontend/src/components/SyncOffsetChart.tsx` — Real-time telemetry SVG line chart
+- `frontend/src/components/StepTracker.tsx` — 7-node ADK Workflow pipeline progress tracker
+- `frontend/src/components/EvidenceCard.tsx` — Dual-panel Loki & Tempo evidence viewer
+- `frontend/src/components/DiagnosisBadge.tsx` — Root-cause badge with confidence meter & reasoning
+- `frontend/src/components/ApprovalCardModal.tsx` — Non-dismissible HITL approval modal
+- `frontend/src/components/RemediationLog.tsx` — Chronological remediation timeline
+- `frontend/src/components/FailureBanner.tsx` — Persistent system failure banner
+- `frontend/tests/verify_components.ts` — Frontend verification suite
+
+**Files Modified:**
+- `frontend/package.json` — Installed `@vitejs/plugin-react@^4.7.0` devDependency
+- `frontend/tsconfig.json` — Included tests in compilation scope
+
+**Packages Installed:**
+- `@vitejs/plugin-react@4.7.0` — Required for React 18 JSX transformation in Vite 5
+
+**Verification Result:**
+- `pnpm build` in `frontend/` succeeded completely (`tsc && vite build`: 1868 modules transformed in 2.19s, zero errors).
+- All 115 unit tests in `backend/tests/unit/` passed (100%).
+- Pass
+---
 
