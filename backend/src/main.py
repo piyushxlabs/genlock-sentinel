@@ -21,7 +21,7 @@ from google.adk.workflow import Edge, FunctionNode, START, Workflow
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.agents.reasoning_loop import run_reasoning_loop
-from src.state.checkpointing import load_checkpoint, save_checkpoint
+from src.state.checkpointing import delete_checkpoint, load_checkpoint, save_checkpoint
 from src.state.reducers import reduce_state
 from src.state.schema import (
     ApprovalStatus,
@@ -36,6 +36,7 @@ from src.telemetry.feedback_annotations import close_feedback_client, get_feedba
 from src.telemetry.otlp_export import bootstrap_telemetry, shutdown_telemetry
 from src.tools.evidence_triage_tools import get_mcp_client
 from src.ui.agui_bridge import get_event_bridge
+from src.ui.event_types import StateSnapshotEvent
 from src.ui.hitl_resumption import (
     DecisionRequest,
     DecisionResponse,
@@ -191,6 +192,33 @@ class InjectDriftResponse(BaseModel):
 
 InjectDriftRequest.model_rebuild()
 InjectDriftResponse.model_rebuild()
+
+
+class ResetSessionRequest(BaseModel):
+    """Payload for resetting an active sentinel session to baseline."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    reason: str = Field(
+        default="Supervisor manual reset to pristine baseline.",
+        description="Reason for resetting session",
+    )
+    supervisor_id: str = Field(default="on_set_lead", description="Supervisor identifier")
+
+
+class ResetSessionResponse(BaseModel):
+    """Response returned upon resetting session state."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    status: str = Field(default="reset", description="Reset status")
+    session_id: str = Field(..., description="Reset session ID")
+    reset_at: str = Field(..., description="ISO 8601 timestamp of reset")
+    message: str = Field(..., description="Status summary")
+
+
+ResetSessionRequest.model_rebuild()
+ResetSessionResponse.model_rebuild()
 
 
 def get_streaming_mode() -> StreamingMode:
@@ -519,6 +547,70 @@ async def stop_session(
         session_id=session_id,
         stopped_at=stopped_ts,
         message=f"Session '{session_id}' halted immediately. State checkpointed successfully.",
+    )
+
+
+@app.post(
+    "/sessions/{session_id}/reset",
+    response_model=ResetSessionResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def reset_session(
+    session_id: str,
+    payload: Optional[ResetSessionRequest] = None,
+) -> ResetSessionResponse:
+    """Resets an active sentinel session to a pristine baseline state.
+
+    1. Deletes existing checkpoint and creates a fresh GenlockSentinelState.
+    2. Clears any cached mock telemetry in GrafanaMCPClient.
+    3. Broadcasts a StateSnapshotEvent over AGUIEventBridge so all connected
+       SSE clients immediately sync their state to the clean baseline.
+    4. Broadcasts a nominal 38.0µs telemetry sample to lock live HUD chart.
+    """
+    req = payload or ResetSessionRequest()
+    reset_ts = utc_now_iso()
+
+    # 1. Clear database checkpoint and create pristine baseline state
+    await delete_checkpoint(session_id=session_id)
+    clean_state = GenlockSentinelState(
+        session_id=session_id,
+        session_status=SessionStatus.MONITORING,
+        approval_state=None,
+        active_drift_events={},
+        evidence_bundle={},
+        diagnosis_history=[],
+        pending_hitl_card=None,
+        remediation_log=[],
+        error_logs=[],
+    )
+    await save_checkpoint(session_id=session_id, state=clean_state)
+
+    # 2. Clear injected mock telemetry cache
+    mcp_client = get_mcp_client()
+    mcp_client.clear_injected_telemetry()
+
+    # 3. Broadcast clean state snapshot to all connected SSE clients
+    bridge = get_event_bridge()
+    snapshot_evt = StateSnapshotEvent(
+        session_id=session_id,
+        state=clean_state.model_dump(mode="json"),
+    )
+    await bridge.broadcast_event(session_id=session_id, event=snapshot_evt)
+
+    # 4. Broadcast nominal telemetry sample so live HUD chart immediately resets to baseline 38µs
+    await bridge.emit_sync_offset_sample(
+        session_id=session_id,
+        node_id="render-01",
+        sync_offset_us=38.0,
+        threshold_us=150.0,
+        timestamp=reset_ts,
+    )
+
+    return ResetSessionResponse(
+        status="reset",
+        session_id=session_id,
+        reset_at=reset_ts,
+        message=f"Session '{session_id}' reset to pristine baseline (16 green nodes, monitoring).",
     )
 
 

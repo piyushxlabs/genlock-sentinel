@@ -14,6 +14,7 @@ from src.main import app
 from src.state.checkpointing import load_checkpoint, save_checkpoint
 from src.state.schema import (
     ApprovalStatus,
+    DriftEvent,
     GenlockSentinelState,
     HITLCard,
     SessionStatus,
@@ -311,3 +312,54 @@ async def test_stop_session_endpoint_rejects_malformed_payload(test_client: Asyn
             json={"unknown_field": "disallowed"},
         )
         assert res.status_code == 422
+
+
+# ------------------------------------------------------------------------------
+# Session Reset Endpoint Tests
+# ------------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_reset_session_endpoint_restores_baseline(test_client: AsyncClient) -> None:
+    """Reset session clears active drift events, pending cards, and restores status to monitoring."""
+    session_id = "sess-test-reset"
+    # Seed session with dirty/active state
+    dirty_state = GenlockSentinelState(
+        session_id=session_id,
+        session_status=SessionStatus.AWAITING_APPROVAL,
+        approval_state=ApprovalStatus.PENDING,
+        active_drift_events={
+            "render-07": DriftEvent(
+                event_id="evt-dirty-001",
+                node_id="render-07",
+                frame_id="frame_1001",
+                breach_ts="2026-09-09T12:00:00Z",
+                sync_offset_us=190.5,
+                threshold_us=150.0,
+            )
+        },
+    )
+    await save_checkpoint(session_id=session_id, state=dirty_state)
+
+    async with test_client as client:
+        res = await client.post(
+            f"/sessions/{session_id}/reset",
+            json={
+                "reason": "Supervisor resetting take for retake",
+                "supervisor_id": "lead_operator",
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "reset"
+        assert data["session_id"] == session_id
+        assert "pristine baseline" in data["message"]
+
+    # Verify state in database is cleanly reset
+    clean_state = await load_checkpoint(session_id=session_id)
+    assert clean_state is not None
+    assert clean_state.session_status == SessionStatus.MONITORING
+    assert clean_state.approval_state is None
+    assert clean_state.active_drift_events == {}
+    assert clean_state.pending_hitl_card is None
+    assert clean_state.diagnosis_history == []
+
