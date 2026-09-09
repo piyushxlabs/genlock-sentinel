@@ -461,14 +461,6 @@ genlock-sentinel/
 │   ├── dashboard_silence_over_guessing.png      # Showcase 3: Zero-hallucination gap handling
 │   └── dashboard_carbon_cockpit_full.png        # Showcase 4: Hollywood Carbon Cockpit
 │
-├── docs/                                        # Constitutional source-of-truth specifications
-│   ├── AGENT_BEHAVIOR_PROFILE.md                # SRE agent identity, persona & constraints
-│   ├── AGENT_ORCHESTRATION_BLUEPRINT.md         # 7-node ADK graph topology & reducers
-│   ├── AGENT_LOGIC_SPEC.md                      # Prompts, tools & Node-Tool Access Matrix
-│   ├── INTERFACE_OBSERVABILITY_SYSTEM.md        # UI design system & AG-UI SSE protocol
-│   ├── AGENT_MASTER_PLAN.md                     # Master engineering execution plan
-│   └── FINAL_HACKATHON_DELIVERY_REPORT.md       # Step 26 master verification report
-│
 ├── backend/                                     # Python 3.11+ ADK 2.x Agent Runtime
 │   ├── pyproject.toml                           # uv project manifest (74 locked dependencies)
 │   ├── scripts/

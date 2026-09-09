@@ -23,9 +23,18 @@ const DEFAULT_SESSION_ID = "sentinel-icvfx-stage-01";
 const STAGE_BURN_RATE_PER_MIN = 1800; // $1,800/min production loss
 
 export const App: React.FC = () => {
-  const [sessionId] = useState(DEFAULT_SESSION_ID);
-  const [state, setState] = useState<GenlockState>({
-    session_id: DEFAULT_SESSION_ID,
+  const [sessionId, setSessionId] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      return searchParams.get("session") || DEFAULT_SESSION_ID;
+    }
+    return DEFAULT_SESSION_ID;
+  });
+
+  const [state, setState] = useState<GenlockState>(() => ({
+    session_id: typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("session") || DEFAULT_SESSION_ID)
+      : DEFAULT_SESSION_ID,
     session_status: "monitoring",
     approval_state: null,
     active_drift_events: {},
@@ -34,7 +43,7 @@ export const App: React.FC = () => {
     pending_hitl_card: null,
     remediation_log: [],
     error_logs: [],
-  });
+  }));
 
   const [telemetrySamples, setTelemetrySamples] = useState<SyncOffsetSample[]>([]);
   const [currentStep, setCurrentStep] = useState<StepEvent["step_name"] | null>("stream_watch");
@@ -45,6 +54,18 @@ export const App: React.FC = () => {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [haltingSession, setHaltingSession] = useState<boolean>(false);
+
+  // Listen for browser navigation / query param changes
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const sid = searchParams.get("session") || DEFAULT_SESSION_ID;
+      setSessionId(sid);
+    };
+
+    window.addEventListener("popstate", handleLocationChange);
+    return () => window.removeEventListener("popstate", handleLocationChange);
+  }, []);
 
   // High-res burn ticker (60fps ms counter)
   const msRef = useRef<number>(Date.now());
@@ -61,6 +82,25 @@ export const App: React.FC = () => {
 
   // SSE connection
   useEffect(() => {
+    // Reset state and buffers for the new session to guarantee strict session isolation
+    setState({
+      session_id: sessionId,
+      session_status: "monitoring",
+      approval_state: null,
+      active_drift_events: {},
+      evidence_bundle: {},
+      diagnosis_history: [],
+      pending_hitl_card: null,
+      remediation_log: [],
+      error_logs: [],
+    });
+    setTelemetrySamples([]);
+    setCurrentStep("stream_watch");
+    setHistorySteps(["stream_watch"]);
+    setStreamingReasoning("");
+    setActiveError(null);
+    setConnected(false);
+
     const client = new AGUIStreamingClient(sessionId);
 
     client.onStateChange((newState) => {
