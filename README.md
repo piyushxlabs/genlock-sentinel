@@ -203,7 +203,7 @@ flowchart TD
     LOKI -->|"raw logs"| ARMOR
     TEMPO -->|"raw traces"| ARMOR
     ARMOR -->|"sanitized telemetry"| N2
-    ADK <-->|"checkpoint read/write"| DB
+    N3 -->|"state checkpoint"| DB
     ADK -->|"AG-UI SSE stream"| COCKPIT
     COCKPIT -->|"POST decision Approve / Deny"| N6
     N4 -->|"auto-remediation"| ACT_AUTO
