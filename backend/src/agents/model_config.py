@@ -246,9 +246,6 @@ async def generate_structured_output(
                 else:
                     break
 
-        # If live inference failed after retries and mock_key is available, fallback gracefully
-        if mock_key and mock_key in MOCK_STRUCTURED_RESPONSES:
-            return schema_cls.model_validate(MOCK_STRUCTURED_RESPONSES[mock_key])
         if last_exception:
             raise last_exception
 

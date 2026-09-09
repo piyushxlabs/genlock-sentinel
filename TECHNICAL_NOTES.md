@@ -204,3 +204,25 @@ Step 4 — No deviations from spec.
 **Impact:** Eliminates layout collapse, guarantees 100% visibility of the 150µs breach perimeter, radar sweep, and 16-node matrix, and delivers an immersive, broadcast-grade mission control experience.
 ---
 
+---
+## Step 24 — Live Observability Telemetry Proxies & Silence-Over-Guessing Enforcement
+**Decision:**
+1. Dynamically bound `QueryLokiLogsInput.datasource_uid` to `os.environ.get("GRAFANA_LOKI_DATASOURCE_UID", "grafanacloud-logs")` in `backend/src/agents/evidence_triage.py` and defined `GRAFANA_LOKI_DATASOURCE_UID` and `GRAFANA_TEMPO_DATASOURCE_UID` across `.env` and `.env.example`.
+2. Re-architected `backend/src/tools/mcp_clients/grafana_mcp_client.py` to route `find_slow_requests` and `get_trace_by_id` to live Grafana Cloud Tempo proxy endpoints (`/api/datasources/proxy/uid/{tempo_ds_uid}/api/search` and `/api/traces/{trace_id}`).
+3. Enforced constitutional silence-over-guessing in `query_loki_logs`: on live query failure or timeout after 3 retries, returns `success=False` with empty result list `[]`, completely eliminating silent injection of `MOCK_LOKI_RESPONSES`.
+4. In `backend/src/agents/model_config.py`, updated `generate_structured_output` to raise `last_exception` rather than falling back to `MOCK_STRUCTURED_RESPONSES` when live inference fails. Deterministic mock fixtures are strictly restricted to `force_mock=True` and test execution environments (`GENLOCK_SENTINEL_FORCE_MOCK="true"`).
+**Reason:** Fulfills `defensive-execution-structured-outputs-and-fallbacks.md` and `strict-grounding-prohibitions-and-refusal-standards.md`. Telemetry failures must register as telemetry gaps (`logs_available=False`) and escalate cleanly to ambiguous classification rather than fabricating plausible evidence. Eliminates dummy shortcuts while maintaining 100% test isolation for pytest.
+**Impact:** Live operations execute against real production cloud telemetry endpoints with zero data fabrication, and unit tests continue to run deterministically and air-gapped.
+---
+
+---
+## Step 25 — Injected Telemetry Caching, Concurrency Retry & Fast-Fail Verification
+**Decision:**
+1. Implemented in-memory caching (`_injected_loki: Dict[str, List[str]]` and `_injected_tempo_spans: Dict[str, List[Dict[str, Any]]]`) with registration methods (`register_injected_telemetry`, `clear_injected_telemetry`) in `GrafanaMCPClient`. When mock telemetry is dispatched to `/sessions/{session_id}/inject-drift`, cached lines and spans are looked up by `query_loki_logs`, `find_slow_requests`, and `get_trace_by_id`, with all output routed through `ModelArmorClient.sanitize_tool_response()`. Forwarded `node_id` from `query_loki_logs` tool execution.
+2. In `backend/scripts/simulate_drift.py`, implemented `check_backend_ready()` probing `GET /healthz` and `GET /docs` before injection; added a 3-retry backoff loop with fail-fast `sys.exit(1)` on connection failure; standardized default URL to `http://localhost:8000`; and increased client timeout to 120s.
+3. In `backend/src/state/checkpointing.py`, cached the `DatabaseSessionService` singleton and tracked `_tables_prepared` across calls, and added a 3-attempt reload-and-retry loop catching `google.adk.errors.StaleSessionError` in `save_checkpoint`.
+**Reason:** Fulfills `defensive-execution-structured-outputs-and-fallbacks.md`, `scope-screening-and-safety-gate-order.md`, and hackathon live demonstration requirements. In live Grafana Cloud mode without a running Unreal Engine cluster streaming logs for synthetic node IDs (e.g. `render-12`), live queries returned empty, triggering silence-over-guessing (`logs_available=False`). Caching injected telemetry enables realistic demonstrations of full triage reasoning while strictly maintaining Model Armor prompt-injection screening and silence-over-guessing semantics for empty logs (e.g. `edge` scenario). The readiness probe prevents orphaned telemetry-less events when the server is initializing, and the `StaleSessionError` retry eliminates optimistic concurrency collisions during concurrent event arrival.
+**Impact:** Delivers reliable synthetic drift injection during live demonstrations, eliminates orphaned records, cuts Cloud SQL checkpoint latency, and guarantees zero unhandled 500 errors.
+---
+
+

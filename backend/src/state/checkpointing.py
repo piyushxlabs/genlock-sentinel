@@ -8,6 +8,7 @@ AGENT_ORCHESTRATION_BLUEPRINT.md Section 3 & 5.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 from pathlib import Path
@@ -53,10 +54,19 @@ def get_database_url() -> str:
     return raw_url
 
 
+_cached_session_service: Optional[DatabaseSessionService] = None
+_tables_prepared: bool = False
+
+
 def create_session_service(db_url: Optional[str] = None) -> DatabaseSessionService:
     """Instantiates an ADK DatabaseSessionService using the specified or default DB URL."""
-    resolved_url = db_url or get_database_url()
-    return DatabaseSessionService(db_url=resolved_url)
+    global _cached_session_service
+    if db_url is not None:
+        return DatabaseSessionService(db_url=db_url)
+    if _cached_session_service is None:
+        resolved_url = get_database_url()
+        _cached_session_service = DatabaseSessionService(db_url=resolved_url)
+    return _cached_session_service
 
 
 async def init_checkpoint_db(
@@ -64,8 +74,10 @@ async def init_checkpoint_db(
     db_url: Optional[str] = None,
 ) -> DatabaseSessionService:
     """Initializes checkpoint database tables asynchronously via prepare_tables()."""
+    global _tables_prepared
     svc = session_service or create_session_service(db_url=db_url)
     await svc.prepare_tables()
+    _tables_prepared = True
     return svc
 
 
@@ -85,8 +97,11 @@ async def save_checkpoint(
     Serializes the full 10-field typed state into the ADK Session storage.
     If the session exists, appends a state delta Event to update storage atomically.
     """
+    global _tables_prepared
     svc = session_service or create_session_service()
-    await svc.prepare_tables()
+    if not _tables_prepared:
+        await svc.prepare_tables()
+        _tables_prepared = True
 
     state_dict: Dict[str, Any] = state.model_dump(mode="json")
 
@@ -110,12 +125,30 @@ async def save_checkpoint(
         )
 
     # Session exists: append state update event to atomically refresh state in DB
-    update_event = Event(
-        author="genlock_sentinel_checkpoint",
-        actions=EventActions(state_delta=state_dict),
-        timestamp=time.time(),
-    )
-    await svc.append_event(session=existing_session, event=update_event)
+    # Handles ADK StaleSessionError optimistic concurrency gracefully with reload & retry
+    for attempt in range(3):
+        try:
+            update_event = Event(
+                author="genlock_sentinel_checkpoint",
+                actions=EventActions(state_delta=state_dict),
+                timestamp=time.time(),
+            )
+            await svc.append_event(session=existing_session, event=update_event)
+            break
+        except Exception as exc:
+            if "StaleSessionError" in type(exc).__name__ or "modified in storage" in str(exc):
+                if attempt < 2:
+                    await asyncio.sleep(0.1 * (attempt + 1))
+                    refreshed = await svc.get_session(
+                        app_name=app_name,
+                        user_id=user_id,
+                        session_id=session_id,
+                    )
+                    if refreshed is not None:
+                        existing_session = refreshed
+                        continue
+            raise
+
     # Fetch refreshed session
     return await svc.get_session(
         app_name=app_name,
@@ -134,8 +167,11 @@ async def load_checkpoint(
 
     Returns None if no session exists for the given session_id.
     """
+    global _tables_prepared
     svc = session_service or create_session_service()
-    await svc.prepare_tables()
+    if not _tables_prepared:
+        await svc.prepare_tables()
+        _tables_prepared = True
 
     try:
         session = await svc.get_session(
@@ -162,8 +198,11 @@ async def delete_checkpoint(
 
     Returns True if deletion succeeded, False otherwise.
     """
+    global _tables_prepared
     svc = session_service or create_session_service()
-    await svc.prepare_tables()
+    if not _tables_prepared:
+        await svc.prepare_tables()
+        _tables_prepared = True
 
     try:
         await svc.delete_session(

@@ -108,13 +108,60 @@ class GrafanaMCPClient:
         self.grafana_url = grafana_url or os.environ.get("GRAFANA_URL", "")
         self.token = token or os.environ.get("GRAFANA_SERVICE_ACCOUNT_TOKEN", "")
         self.tempo_url = tempo_url or os.environ.get("TEMPO_MCP_URL", "")
-        self.force_mock = force_mock
+        self.force_mock = force_mock or (os.environ.get("GENLOCK_SENTINEL_FORCE_MOCK", "").lower() in ("true", "1"))
+        self.loki_ds_uid = os.environ.get("GRAFANA_LOKI_DATASOURCE_UID", "grafanacloud-logs")
+        self.tempo_ds_uid = os.environ.get("GRAFANA_TEMPO_DATASOURCE_UID", "grafanacloud-traces")
         self.model_armor = model_armor_client or get_model_armor_client()
         self.backoff_delays = [1.0, 2.0, 4.0]
+        self._injected_loki: Dict[str, List[str]] = {}
+        self._injected_tempo_spans: Dict[str, List[Dict[str, Any]]] = {}
+
+    def register_injected_telemetry(
+        self,
+        node_id: str,
+        mock_loki_lines: Optional[List[str]] = None,
+        mock_tempo_spans: Optional[List[Dict[str, Any]]] = None,
+        frame_id: Optional[str] = None,
+        event_id: Optional[str] = None,
+    ) -> None:
+        """Registers synthetic telemetry payloads for testing and simulation."""
+        if mock_loki_lines is not None:
+            self._injected_loki[node_id] = list(mock_loki_lines)
+            if event_id:
+                self._injected_loki[event_id] = list(mock_loki_lines)
+            MOCK_LOKI_RESPONSES[node_id] = list(mock_loki_lines)
+
+        if mock_tempo_spans is not None:
+            self._injected_tempo_spans[node_id] = list(mock_tempo_spans)
+            if frame_id:
+                self._injected_tempo_spans[frame_id] = list(mock_tempo_spans)
+                MOCK_TEMPO_TRACES[frame_id] = {"spans": list(mock_tempo_spans)}
+            if event_id:
+                self._injected_tempo_spans[event_id] = list(mock_tempo_spans)
+            findings = [
+                {
+                    "span": span.get("span_name", "frame_render"),
+                    "duration_ms": span.get("duration_ms", 300),
+                    "status": span.get("status", "delayed"),
+                    "attributes": span.get("attributes", {}),
+                }
+                for span in mock_tempo_spans
+            ]
+            if findings:
+                MOCK_SIFT_RESPONSES[node_id] = {
+                    "investigation_id": f"sift-{node_id}-{event_id or 'injected'}",
+                    "findings": findings,
+                }
+
+    def clear_injected_telemetry(self) -> None:
+        """Clears all registered synthetic telemetry."""
+        self._injected_loki.clear()
+        self._injected_tempo_spans.clear()
 
     async def query_loki_logs(
         self,
         payload: QueryLokiLogsInput,
+        node_id: Optional[str] = None,
         simulate_timeout: bool = False,
     ) -> QueryLokiLogsOutput:
         """Executes Loki log search with Model Armor screening, backoff, and silence-over-guessing fallback."""
@@ -128,13 +175,64 @@ class GrafanaMCPClient:
 
         sanitized_query = sanitize_logql(payload.logql)
 
-        if not self.force_mock and self.grafana_url and self.token:
+        # 1. Check if injected mock telemetry exists for this node or query
+        target_node = node_id
+        if not target_node:
+            for k in self._injected_loki:
+                if k in sanitized_query:
+                    target_node = k
+                    break
+
+        if target_node and target_node in self._injected_loki:
+            injected_lines = self._injected_loki[target_node]
+            if not injected_lines:
+                # Explicit empty logs (e.g. edge scenario simulating missing Loki logs)
+                return QueryLokiLogsOutput(
+                    success=False,
+                    result=[],
+                    error=f"query_loki_logs: No logs available for node '{target_node}'",
+                )
+            sanitized_lines, findings, _ = self.model_armor.sanitize_tool_response(
+                "query_loki_logs", injected_lines
+            )
+            return QueryLokiLogsOutput(
+                success=True,
+                result=sanitized_lines,
+                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            )
+
+        # Explicit mock mode for tests / air-gapped evaluation
+        if self.force_mock:
+            for node_key, lines in MOCK_LOKI_RESPONSES.items():
+                if node_key in sanitized_query:
+                    sanitized_lines, findings, _ = self.model_armor.sanitize_tool_response(
+                        "query_loki_logs", lines
+                    )
+                    return QueryLokiLogsOutput(
+                        success=True,
+                        result=sanitized_lines,
+                        error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+                    )
+            default_lines = MOCK_LOKI_RESPONSES["render-07"]
+            sanitized_lines, findings, _ = self.model_armor.sanitize_tool_response(
+                "query_loki_logs", default_lines
+            )
+            return QueryLokiLogsOutput(
+                success=True,
+                result=sanitized_lines,
+                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            )
+
+        # Live production path
+        if self.grafana_url and self.token:
             headers = {"Authorization": f"Bearer {self.token}"}
+            ds_uid = payload.datasource_uid or self.loki_ds_uid
+            last_error: Optional[str] = None
             for attempt in range(len(self.backoff_delays) + 1):
                 try:
                     async with httpx.AsyncClient(timeout=5.0) as client:
                         resp = await client.get(
-                            f"{self.grafana_url.rstrip('/')}/api/datasources/proxy/uid/{payload.datasource_uid}/loki/api/v1/query_range",
+                            f"{self.grafana_url.rstrip('/')}/api/datasources/proxy/uid/{ds_uid}/loki/api/v1/query_range",
                             params={"query": sanitized_query, "start": payload.start, "end": payload.end, "limit": payload.limit},
                             headers=headers,
                         )
@@ -152,33 +250,25 @@ class GrafanaMCPClient:
                                 result=sanitized_lines,
                                 error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
                             )
-                except Exception:
-                    if attempt < len(self.backoff_delays):
-                        await asyncio.sleep(self.backoff_delays[attempt])
-                    else:
-                        break
+                        else:
+                            last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                except Exception as exc:
+                    last_error = str(exc)
 
-        # Grounded Section 9.1 Mock Fallback
-        for node_key, lines in MOCK_LOKI_RESPONSES.items():
-            if node_key in sanitized_query:
-                sanitized_lines, findings, _ = self.model_armor.sanitize_tool_response(
-                    "query_loki_logs", lines
-                )
-                return QueryLokiLogsOutput(
-                    success=True,
-                    result=sanitized_lines,
-                    error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
-                )
+                if attempt < len(self.backoff_delays):
+                    await asyncio.sleep(self.backoff_delays[attempt])
 
-        # Default clean Section 9.1 Simple mock
-        default_lines = MOCK_LOKI_RESPONSES["render-07"]
-        sanitized_lines, findings, _ = self.model_armor.sanitize_tool_response(
-            "query_loki_logs", default_lines
-        )
+            # Silence-over-guessing: report failure without fabricating telemetry
+            return QueryLokiLogsOutput(
+                success=False,
+                result=[],
+                error=f"query_loki_logs: Telemetry unavailable from Grafana Cloud after retries. Last error: {last_error}",
+            )
+
         return QueryLokiLogsOutput(
-            success=True,
-            result=sanitized_lines,
-            error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            success=False,
+            result=[],
+            error="query_loki_logs: No Grafana URL or credentials configured.",
         )
 
     async def find_slow_requests(
@@ -186,7 +276,7 @@ class GrafanaMCPClient:
         payload: FindSlowRequestsInput,
         simulate_timeout: bool = False,
     ) -> FindSlowRequestsOutput:
-        """Invokes Grafana Sift investigation on Tempo spans with Model Armor screening and backoff."""
+        """Invokes Grafana Sift investigation / Tempo slow request query with Model Armor screening and backoff."""
         if simulate_timeout:
             return FindSlowRequestsOutput(
                 success=False,
@@ -194,16 +284,88 @@ class GrafanaMCPClient:
                 error="find_slow_requests timed out after 3 retries",
             )
 
-        # Grounded mock fallback
         node_id = payload.service_name
-        result_data = MOCK_SIFT_RESPONSES.get(node_id, MOCK_SIFT_RESPONSES["render-07"])
-        sanitized_data, findings, _ = self.model_armor.sanitize_tool_response(
-            "find_slow_requests", result_data
-        )
+        # 1. Check if injected telemetry exists for this node
+        if node_id in self._injected_tempo_spans:
+            spans = self._injected_tempo_spans[node_id]
+            findings = [
+                {
+                    "span": span.get("span_name", "frame_render"),
+                    "duration_ms": span.get("duration_ms", 300),
+                    "status": span.get("status", "delayed"),
+                    "attributes": span.get("attributes", {}),
+                }
+                for span in spans
+            ]
+            result_data = {
+                "investigation_id": f"sift-injected-{node_id}",
+                "findings": findings,
+            }
+            sanitized_data, findings_sec, _ = self.model_armor.sanitize_tool_response(
+                "find_slow_requests", result_data
+            )
+            return FindSlowRequestsOutput(
+                success=True,
+                result=sanitized_data if isinstance(sanitized_data, dict) else {"findings": sanitized_data},
+                error=f"Model Armor quarantined {len(findings_sec)} security finding(s)" if findings_sec else None,
+            )
+
+        # Explicit mock mode for tests / air-gapped evaluation
+        if self.force_mock:
+            result_data = MOCK_SIFT_RESPONSES.get(node_id, MOCK_SIFT_RESPONSES["render-07"])
+            sanitized_data, findings, _ = self.model_armor.sanitize_tool_response(
+                "find_slow_requests", result_data
+            )
+            return FindSlowRequestsOutput(
+                success=True,
+                result=sanitized_data,
+                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            )
+
+        # Live production path
+        if self.grafana_url and self.token:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            last_error: Optional[str] = None
+            for attempt in range(len(self.backoff_delays) + 1):
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        resp = await client.get(
+                            f"{self.grafana_url.rstrip('/')}/api/datasources/proxy/uid/{self.tempo_ds_uid}/api/search",
+                            params={
+                                "tags": f"service.name={payload.service_name}",
+                                "minDuration": f"{payload.min_duration_ms}ms",
+                                "limit": 20,
+                            },
+                            headers=headers,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            sanitized_data, findings, _ = self.model_armor.sanitize_tool_response(
+                                "find_slow_requests", data
+                            )
+                            return FindSlowRequestsOutput(
+                                success=True,
+                                result=sanitized_data if isinstance(sanitized_data, dict) else {"traces": sanitized_data},
+                                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+                            )
+                        else:
+                            last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                except Exception as exc:
+                    last_error = str(exc)
+
+                if attempt < len(self.backoff_delays):
+                    await asyncio.sleep(self.backoff_delays[attempt])
+
+            return FindSlowRequestsOutput(
+                success=False,
+                result={},
+                error=f"find_slow_requests: Telemetry unavailable from Grafana Cloud after retries. Last error: {last_error}",
+            )
+
         return FindSlowRequestsOutput(
-            success=True,
-            result=sanitized_data,
-            error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            success=False,
+            result={},
+            error="find_slow_requests: No Grafana URL or credentials configured.",
         )
 
     async def get_trace_by_id(
@@ -211,7 +373,7 @@ class GrafanaMCPClient:
         payload: GetTraceByIdInput,
         simulate_timeout: bool = False,
     ) -> GetTraceByIdOutput:
-        """Retrieves full trace by frame_id from Tempo MCP with Model Armor screening and backoff."""
+        """Retrieves full trace by frame_id or trace_id from Tempo MCP with Model Armor screening and backoff."""
         if simulate_timeout:
             return GetTraceByIdOutput(
                 success=False,
@@ -219,14 +381,78 @@ class GrafanaMCPClient:
                 error="get_trace_by_id timed out after 3 retries",
             )
 
-        # Grounded mock fallback
         trace_id = payload.trace_id
-        trace_data = MOCK_TEMPO_TRACES.get(trace_id, {"spans": [{"service": "render-07", "duration_ms": 340, "status": "ok", "frame_id": trace_id}]})
-        sanitized_trace, findings, _ = self.model_armor.sanitize_tool_response(
-            "get_trace_by_id", trace_data
-        )
+        # 1. Check if injected telemetry exists for this frame/trace
+        if trace_id in self._injected_tempo_spans:
+            spans = self._injected_tempo_spans[trace_id]
+            trace_data = {"spans": spans}
+            sanitized_trace, findings, _ = self.model_armor.sanitize_tool_response(
+                "get_trace_by_id", trace_data
+            )
+            return GetTraceByIdOutput(
+                success=True,
+                result=sanitized_trace if isinstance(sanitized_trace, dict) else {"spans": sanitized_trace},
+                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            )
+
+        # Explicit mock mode for tests / air-gapped evaluation
+        if self.force_mock:
+            trace_data = MOCK_TEMPO_TRACES.get(
+                trace_id,
+                {"spans": [{"service": "render-07", "duration_ms": 340, "status": "ok", "frame_id": trace_id}]},
+            )
+            sanitized_trace, findings, _ = self.model_armor.sanitize_tool_response(
+                "get_trace_by_id", trace_data
+            )
+            return GetTraceByIdOutput(
+                success=True,
+                result=sanitized_trace if isinstance(sanitized_trace, dict) else {"spans": sanitized_trace},
+                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            )
+
+        # Live production path
+        if self.grafana_url and self.token:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            last_error: Optional[str] = None
+            for attempt in range(len(self.backoff_delays) + 1):
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        # Check if trace_id is valid hex
+                        is_hex = all(c in "0123456789abcdefABCDEF" for c in payload.trace_id) and len(payload.trace_id) in (16, 32)
+                        if is_hex:
+                            target_url = f"{self.grafana_url.rstrip('/')}/api/datasources/proxy/uid/{self.tempo_ds_uid}/api/traces/{payload.trace_id}"
+                            params = {}
+                        else:
+                            target_url = f"{self.grafana_url.rstrip('/')}/api/datasources/proxy/uid/{self.tempo_ds_uid}/api/search"
+                            params = {"tags": f"frame_id={payload.trace_id}", "limit": 5}
+
+                        resp = await client.get(target_url, params=params, headers=headers)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            sanitized_trace, findings, _ = self.model_armor.sanitize_tool_response(
+                                "get_trace_by_id", data
+                            )
+                            return GetTraceByIdOutput(
+                                success=True,
+                                result=sanitized_trace if isinstance(sanitized_trace, dict) else {"spans": sanitized_trace},
+                                error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+                            )
+                        else:
+                            last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                except Exception as exc:
+                    last_error = str(exc)
+
+                if attempt < len(self.backoff_delays):
+                    await asyncio.sleep(self.backoff_delays[attempt])
+
+            return GetTraceByIdOutput(
+                success=False,
+                result={},
+                error=f"get_trace_by_id: Telemetry unavailable from Grafana Cloud after retries. Last error: {last_error}",
+            )
+
         return GetTraceByIdOutput(
-            success=True,
-            result=sanitized_trace,
-            error=f"Model Armor quarantined {len(findings)} security finding(s)" if findings else None,
+            success=False,
+            result={},
+            error="get_trace_by_id: No Grafana URL or credentials configured.",
         )

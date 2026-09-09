@@ -16,9 +16,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
+from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -111,10 +113,53 @@ SCENARIOS: Dict[str, DriftTelemetryPayload] = {
 }
 
 
+async def check_backend_ready(base_url: str, retries: int = 3, backoff_sec: float = 1.0) -> bool:
+    """Checks backend readiness before emitting or dispatching drift events.
+
+    Probes GET {base_url}/healthz or GET {base_url}/docs with exponential retries.
+    Returns True if healthy, False if unreachable.
+    """
+    import httpx
+
+    endpoints = [f"{base_url.rstrip('/')}/healthz", f"{base_url.rstrip('/')}/docs"]
+    for attempt in range(1, retries + 1):
+        for endpoint in endpoints:
+            try:
+                async with httpx.AsyncClient(timeout=3.0) as client:
+                    resp = await client.get(endpoint)
+                    if resp.status_code in (200, 307):
+                        sys.stdout.write(f"[READINESS] Backend probe succeeded: {endpoint} -> HTTP {resp.status_code}\n")
+                        sys.stdout.flush()
+                        return True
+            except (httpx.ConnectError, httpx.TimeoutException, ConnectionError):
+                pass
+            except Exception:
+                pass
+
+        if attempt < retries:
+            sys.stderr.write(
+                f"[READINESS RETRY] Backend not ready at {base_url} (attempt {attempt}/{retries}). Retrying in {backoff_sec}s...\n"
+            )
+            await asyncio.sleep(backoff_sec)
+
+    sys.stderr.write(
+        f"\n[FATAL] Backend readiness probe failed at {base_url} after {retries} attempts.\n"
+        f"FastAPI server is not reachable. Aborting drift injection to prevent orphaned telemetry-less events.\n"
+        f"Start backend first: uv run uvicorn src.main:app --port 8000\n"
+    )
+    return False
+
+
 async def emit_drift_event(
-    payload: DriftTelemetryPayload, destination_url: Optional[str] = None
-) -> None:
-    """Emits or prints a synthetic drift event without blocking I/O."""
+    payload: DriftTelemetryPayload,
+    destination_url: Optional[str] = None,
+    retries: int = 3,
+    backoff_sec: float = 1.0,
+) -> bool:
+    """Emits or prints a synthetic drift event with retry mechanism.
+
+    Returns True if emitted (and dispatched successfully if URL provided), False otherwise.
+    """
     output = payload.model_dump_json(indent=2)
     sys.stdout.write(f"\n[DRIFT EMITTED] Event: {payload.event_id} | Node: {payload.node_id}\n")
     sys.stdout.write(f"Timestamp: {payload.breach_ts} | Sync Offset: {payload.sync_offset_us} µs\n")
@@ -125,26 +170,43 @@ async def emit_drift_event(
     sys.stdout.write(f"{output}\n")
     sys.stdout.flush()
 
-    if destination_url:
-        import httpx
+    if not destination_url:
+        return True
 
-        async with httpx.AsyncClient() as client:
-            try:
+    import httpx
+
+    for attempt in range(1, retries + 1):
+        try:
+            async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     destination_url,
                     json=payload.model_dump(),
-                    timeout=10.0,
+                    timeout=120.0,
                 )
                 sys.stdout.write(
                     f"\n[HTTP DISPATCH] Successfully forwarded to {destination_url} -> Status {resp.status_code}\n"
                 )
                 if resp.status_code >= 400:
                     sys.stderr.write(f"[HTTP ERROR] Server responded with error: {resp.text}\n")
-            except Exception as e:
-                sys.stderr.write(
-                    f"\n[HTTP DISPATCH FAILED] Could not reach runtime at {destination_url}: {e}\n"
-                    f"(Ensure backend FastAPI server is running on port 8000: uv run uvicorn src.main:app --port 8000)\n"
-                )
+                    return False
+                return True
+        except (httpx.ConnectError, ConnectionError) as conn_err:
+            sys.stderr.write(
+                f"[DISPATCH ATTEMPT {attempt}/{retries}] Connection failed to {destination_url}: {conn_err}\n"
+            )
+            if attempt < retries:
+                await asyncio.sleep(backoff_sec)
+        except Exception as e:
+            sys.stderr.write(
+                f"\n[HTTP DISPATCH FAILED] Unexpected error reaching runtime at {destination_url}: {e}\n"
+            )
+            return False
+
+    sys.stderr.write(
+        f"\n[HTTP DISPATCH FAILED] Could not connect to runtime at {destination_url} after {retries} retries.\n"
+        f"Failing fast without persisting event to database to prevent orphaned events without Loki/Tempo payloads.\n"
+    )
+    return False
 
 
 async def run_stream(interval_sec: float, count: int, destination_url: Optional[str] = None) -> None:
@@ -172,7 +234,10 @@ async def run_stream(interval_sec: float, count: int, destination_url: Optional[
                 }
             ],
         )
-        await emit_drift_event(payload, destination_url=destination_url)
+        ok = await emit_drift_event(payload, destination_url=destination_url)
+        if not ok:
+            sys.stderr.write(f"[STREAM ABORTED] Stopping stream due to dispatch failure on event {payload.event_id}\n")
+            sys.exit(1)
         if i < count:
             await asyncio.sleep(interval_sec)
 
@@ -226,11 +291,21 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Resolve target URL (defaults to active local runtime session endpoint)
+    # Resolve target URL (defaults to active local runtime session endpoint at http://localhost:8000)
+    default_base = os.environ.get("SENTINEL_BACKEND_URL", "http://localhost:8000").rstrip("/")
     if args.no_dispatch:
         dest_url = None
+        base_url = None
     else:
-        dest_url = args.url or f"http://127.0.0.1:8000/sessions/{args.session_id}/inject-drift"
+        dest_url = args.url or f"{default_base}/sessions/{args.session_id}/inject-drift"
+        parsed = urlparse(dest_url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+    # Check backend readiness before attempting injection
+    if dest_url and base_url:
+        ready = asyncio.run(check_backend_ready(base_url, retries=3, backoff_sec=1.0))
+        if not ready:
+            sys.exit(1)
 
     if args.scenario == "stream":
         asyncio.run(run_stream(args.interval, args.count, dest_url))
@@ -253,7 +328,9 @@ def main() -> None:
         else:
             payload = base_payload
 
-        asyncio.run(emit_drift_event(payload, dest_url))
+        success = asyncio.run(emit_drift_event(payload, dest_url))
+        if not success:
+            sys.exit(1)
 
 
 if __name__ == "__main__":

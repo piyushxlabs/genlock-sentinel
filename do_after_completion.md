@@ -1,47 +1,65 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 23 COMPLETION CHECKLIST
-# Telemetry SVG Restoration, 16-Node Matrix & Sticky Cockpit Layout
+# STEP 25 COMPLETION CHECKLIST
+# Drift Injection Concurrency & Mock Evidence Ingestion Verification
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify frontend dev server is running:
+[ ] Verify backend server is running and responsive:
     ```
-    cd frontend && pnpm dev
+    powershell -Command "Invoke-WebRequest -Uri 'http://localhost:8000/healthz' -TimeoutSec 5 | Select-Object -ExpandProperty Content"
     ```
-    Expected: Vite ready at http://localhost:3000/
+    Expected: {"status":"healthy"}
 
-[ ] Verify backend FastAPI server is running:
+[ ] Verify frontend console is running and responsive:
     ```
-    cd backend && uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
+    powershell -Command "Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode"
     ```
-    Expected: Application startup complete. Uvicorn running on http://0.0.0.0:8000
+    Expected: 200
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Run synthetic drift injection to verify real-time SVG curves and red LED alerts:
+[ ] Run injected telemetry unit test suite:
     ```
-    cd backend && uv run python scripts/simulate_drift.py --scenario complex
+    cd backend
+    uv run pytest tests/unit/test_injected_telemetry.py -v
     ```
-    Expected: Drift emitted for render-12 with 210.0 µs breach.
+    Expected: 7 passed in ~1s
+    If wrong: Check `backend/src/tools/mcp_clients/grafana_mcp_client.py` and `simulate_drift.py`.
 
-[ ] Check the operations console at http://localhost:3000:
-    Expected: 
-    1. The 150µs breach perimeter line and rolling 60-sample window graph are fully visible (280px explicit height).
-    2. The 16 cluster nodes (R01 through R16) are rendered in an 8-column grid with R12 flashing red with active pulse rings.
-    3. The active drift badge `render-12 [210.0 µs]` appears alongside the matrix without replacing it.
-    4. Scrolling down the right-hand column keeps the telemetry chart pinned cleanly on the left (sticky top).
+[ ] Run full backend unit test suite:
+    ```
+    cd backend
+    uv run pytest tests/unit/ -q
+    ```
+    Expected: 154 passed, 1 skipped in ~6s
+    If wrong: Check test output and ensure mock telemetry cache was properly cleared between tests.
+
+[ ] Run production readiness and failure simulation suite:
+    ```
+    cd backend
+    uv run pytest tests/evals/test_production_readiness.py -v
+    ```
+    Expected: 14 passed in ~3s
+
+[ ] Run frontend production build check:
+    ```
+    cd frontend
+    pnpm build
+    ```
+    Expected: Zero errors — `tsc && vite build` — 1868 modules transformed in ~2s
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `frontend/src/components/SyncOffsetChart.tsx` — Fixed SVG container height (280px), added roseGlow gradient and red sync curves for breaches, permanently integrated the 16-node cluster matrix (R01–R16) with active drift badges.
-[ ] File: `frontend/src/App.tsx` — Sticky left panel (`xl:col-span-7 sticky top-4 self-start`) and right column spacing (`xl:col-span-5 flex flex-col gap-6`).
-[ ] File: `frontend/src/index.css` — Configured `.cockpit-col-left` with `position: sticky; top: 16px; align-self: flex-start`, responsive 12-column grid, and utility classes.
-[ ] Feature: Persistent 16-Node Matrix — Displays all 16 nDisplay render nodes with live health status, organic pulse pings, and breach reactivity.
-[ ] Feature: Sticky Telemetry Pinning — Eliminates empty left voids when reviewing long Loki/Tempo traces in the right column.
+[ ] File: `backend/scripts/simulate_drift.py` — Added `check_backend_ready()` probing `GET /healthz` and `GET /docs`; 3-attempt backoff retry loop with fail-fast `sys.exit(1)` on connection failure to prevent orphaned events without Loki/Tempo payloads; standardized URL to `http://localhost:8000`; 120s timeout.
+[ ] File: `backend/src/tools/mcp_clients/grafana_mcp_client.py` — In-memory cached mock telemetry storage (`_injected_loki`, `_injected_tempo_spans`), `register_injected_telemetry()`, and Model Armor prompt-injection screening on all retrieved lines and spans.
+[ ] File: `backend/src/tools/evidence_triage_tools.py` — Forwarded `node_id` in `query_loki_logs` to route queries to node-specific injected telemetry caches.
+[ ] File: `backend/src/main.py` — Registered incoming `mock_loki_lines` and `mock_tempo_spans` in `/sessions/{session_id}/inject-drift` via `get_mcp_client().register_injected_telemetry()`.
+[ ] File: `backend/src/state/checkpointing.py` — Cached `DatabaseSessionService` singleton and `_tables_prepared` tracking flag; added 3-attempt reload-and-retry loop on `StaleSessionError` in `save_checkpoint`.
+[ ] File: `backend/tests/unit/test_injected_telemetry.py` — 7 comprehensive unit tests for injected telemetry caching, Model Armor screening, edge scenario gap handling, readiness probe, and connection failure fast-fail behavior.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
@@ -49,39 +67,45 @@
 
 Test 1 — Files Exist:
 ```
-ls frontend/src/components/SyncOffsetChart.tsx frontend/src/App.tsx frontend/src/index.css
+powershell -Command "Test-Path backend\tests\unit\test_injected_telemetry.py, backend\scripts\simulate_drift.py, backend\src\tools\mcp_clients\grafana_mcp_client.py"
 ```
-✅ Expected: All modified files are present.
-❌ If missing: Check git status or restore from working directory.
+✅ Expected: True, True, True
+❌ If missing: Restore from git history.
 
-Test 2 — Frontend Production Build:
+Test 2 — Environment / Dependencies:
 ```
-cd frontend && pnpm build
+cd backend
+uv run python -c "import httpx, pydantic, google.genai, asyncpg; print('All critical packages imported successfully')"
 ```
-✅ Expected: `tsc && vite build` completes with 0 errors and bundles all modules cleanly.
-❌ If errors: Check TypeScript types in `SyncOffsetChart.tsx` or `App.tsx`.
+✅ Expected: All critical packages imported successfully
+❌ If errors: Run `uv sync` in `backend/`
 
-Test 3 — Backend Unit Test Suite:
+Test 3 — Server or Process Start:
 ```
-cd backend && uv run pytest tests/unit -q
+powershell -Command "Invoke-RestMethod -Uri 'http://localhost:8000/healthz' -Method Get"
 ```
-✅ Expected: 148 passed in ~12 seconds.
-❌ If errors: Verify backend environment and Python 3.11 virtual environment.
+✅ Expected: @{status=healthy}
+❌ If errors: Check if uvicorn process is running (`uv run uvicorn src.main:app --host 0.0.0.0 --port 8000`)
 
-Test 4 — Functional Drift Simulation:
+Test 4 — Functional Check (Simulated Drift Injection with Evidence):
 ```
-cd backend && uv run python scripts/simulate_drift.py --scenario complex
+cd backend
+uv run python scripts/simulate_drift.py --scenario simple --event-id drift-test-check-001
 ```
-✅ Expected: Drift successfully emitted and posted to `/sessions/sentinel-icvfx-stage-01/inject-drift` with HTTP 200 OK.
-❌ If wrong: Ensure backend uvicorn is running on port 8000.
+✅ Expected: 
+- Probes backend readiness: [SUCCESS]
+- Dispatches HTTP POST to http://localhost:8000/sessions/session-sim-001/inject-drift
+- Returns HTTP 202 Accepted
+- Node 2 triage extracts `logs_available: True` and populated log/trace summaries without falling back to telemetry gaps.
+❌ If wrong: Ensure backend is running and `simulate_drift.py` has network access to port 8000.
 
 Test 5 — Security Check:
-[ ] Verify .env is in .gitignore:
+[ ] Verify .env is in .gitignore
     ```
     git check-ignore backend/.env
     ```
-    ✅ Expected: backend/.env is ignored by git.
-    ❌ If missing: Add `.env` to .gitignore immediately.
+    ✅ Expected: backend/.env appears in the output
+    ❌ If missing: Add `.env` to .gitignore immediately
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 GIT COMMIT
@@ -90,11 +114,11 @@ Test 5 — Security Check:
 
 ```
 git add .
-git commit -m "Step 23: Telemetry SVG Restoration, 16-Node Matrix & Sticky Cockpit Layout"
+git commit -m "Step 25: Drift Injection Concurrency & Mock Evidence Ingestion Verification"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to the next prompt until:
+✋ DO NOT proceed to Step 26 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully

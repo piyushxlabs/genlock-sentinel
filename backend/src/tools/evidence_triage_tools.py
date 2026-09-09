@@ -56,7 +56,7 @@ async def query_loki_logs(
             )
 
     active_client = client or get_mcp_client()
-    return await active_client.query_loki_logs(payload, simulate_timeout=simulate_timeout)
+    return await active_client.query_loki_logs(payload, node_id=node_id, simulate_timeout=simulate_timeout)
 
 
 async def find_slow_requests(

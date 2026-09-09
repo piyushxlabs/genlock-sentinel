@@ -34,6 +34,7 @@ from src.state.schema import (
 )
 from src.telemetry.feedback_annotations import close_feedback_client, get_feedback_client
 from src.telemetry.otlp_export import bootstrap_telemetry, shutdown_telemetry
+from src.tools.evidence_triage_tools import get_mcp_client
 from src.ui.agui_bridge import get_event_bridge
 from src.ui.hitl_resumption import (
     DecisionRequest,
@@ -376,6 +377,17 @@ async def inject_drift(
     state = await load_checkpoint(session_id=session_id)
     if state is None:
         state = GenlockSentinelState(session_id=session_id)
+
+    # 0. Register mock telemetry evidence if provided so Node 2 reads immediately
+    if payload.mock_loki_lines or payload.mock_tempo_spans:
+        mcp_client = get_mcp_client()
+        mcp_client.register_injected_telemetry(
+            node_id=payload.node_id,
+            mock_loki_lines=payload.mock_loki_lines,
+            mock_tempo_spans=payload.mock_tempo_spans,
+            frame_id=payload.frame_id,
+            event_id=payload.event_id,
+        )
 
     drift = DriftEvent(
         event_id=payload.event_id,

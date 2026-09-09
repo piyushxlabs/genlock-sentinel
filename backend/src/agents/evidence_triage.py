@@ -13,6 +13,7 @@ Node-Tool Access Matrix:
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, Optional
 
 from google.adk import Context
@@ -118,7 +119,7 @@ async def evidence_triage_node(
 
     # 1. Execute Tool 1: query_loki_logs
     loki_payload = QueryLokiLogsInput(
-        datasource_uid="loki-stage-01",
+        datasource_uid=os.environ.get("GRAFANA_LOKI_DATASOURCE_UID", "grafanacloud-logs"),
         logql=f'{{cluster="stage-ndisplay"}} |= "{node_id}"',
         start=drift_event.breach_ts,
         end=utc_now_iso(),

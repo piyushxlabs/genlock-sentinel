@@ -878,3 +878,78 @@
 - Pass
 ---
 
+---
+## Step 24 — Real Observability Telemetry, Live Proxy Wiring & Silence-Over-Guessing Enforcement
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Updated `backend/src/agents/evidence_triage.py` to dynamically load `datasource_uid` from `GRAFANA_LOKI_DATASOURCE_UID` (defaulting to `grafanacloud-logs`), eliminating the hardcoded `loki-stage-01` 404 failure.
+- Updated `backend/.env` and `backend/.env.example` with `GRAFANA_LOKI_DATASOURCE_UID=grafanacloud-logs` and `GRAFANA_TEMPO_DATASOURCE_UID=grafanacloud-traces`.
+- Re-architected `backend/src/tools/mcp_clients/grafana_mcp_client.py`:
+  - `query_loki_logs`: Enforced constitutional silence-over-guessing during live execution; when Grafana Cloud queries fail or timeout after 3 retries, returns `success=False` with `result=[]` without fabricating plausible log lines.
+  - `find_slow_requests`: Wired live authenticated HTTP GET queries to Grafana Cloud Tempo proxy endpoint (`/api/datasources/proxy/uid/{tempo_ds_uid}/api/search`), returning real slow request trace data with Model Armor sanitization and silence-over-guessing fallback.
+  - `get_trace_by_id`: Wired live authenticated HTTP GET queries to Grafana Cloud Tempo proxy endpoint (`/api/datasources/proxy/uid/{tempo_ds_uid}/api/traces/{trace_id}` for hex IDs and `/api/search` for tag searches), returning real trace spans with Model Armor sanitization and silence-over-guessing fallback.
+  - Preserved deterministic offline mock handling strictly when `self.force_mock=True` or `GENLOCK_SENTINEL_FORCE_MOCK="true"` (set by `conftest.py`).
+- Updated `backend/src/agents/model_config.py` in `generate_structured_output` to raise `last_exception` upon live inference failure after exponential backoff, preventing silent mock substitution in live production paths.
+- Verified live end-to-end execution against Grafana Cloud (`https://magentaparfait3455.grafana.net`) with HTTP 200 responses on live Loki and Tempo endpoints.
+
+**Files Created:**
+- None
+
+**Files Modified:**
+- `backend/.env` — Added `GRAFANA_LOKI_DATASOURCE_UID` and `GRAFANA_TEMPO_DATASOURCE_UID`.
+- `backend/.env.example` — Added `GRAFANA_LOKI_DATASOURCE_UID` and `GRAFANA_TEMPO_DATASOURCE_UID`.
+- `backend/src/agents/evidence_triage.py` — Dynamic resolution of Loki datasource UID from environment.
+- `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Live Tempo proxy search, silence-over-guessing enforcement, and dynamic datasource routing.
+- `backend/src/agents/model_config.py` — Elimination of silent mock fallback when live inference fails.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/ -v`: 148/148 passed (100%).
+- `uv run pytest tests/evals/test_production_readiness.py -v`: 14/14 passed (100%).
+- `uv run pytest tests/evals/test_checkpoint_cloudsql.py -v`: 3 passed, 1 skipped (Cloud SQL integration).
+- Live Grafana Cloud test: HTTP 200 on Loki query, HTTP 200 on Tempo search, HTTP 200 on trace query.
+- Pass
+---
+
+---
+## Step 25 — Drift Injection Concurrency & Mock Evidence Ingestion Verification
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- In `backend/scripts/simulate_drift.py`: Added backend readiness health check (`check_backend_ready`) probing `GET /healthz` and `GET /docs` prior to injection; implemented a 3-retry backoff loop with fail-fast `sys.exit(1)` on connection failure to prevent orphaned events without Loki/Tempo payloads; standardized base URL resolution to `http://localhost:8000` (or `SENTINEL_BACKEND_URL`); increased request timeout to 120.0s to accommodate Cloud SQL public network latency.
+- In `backend/src/tools/mcp_clients/grafana_mcp_client.py`: Implemented in-memory caching (`_injected_loki`, `_injected_tempo_spans`) and management methods (`register_injected_telemetry`, `clear_injected_telemetry`) to bridge injected synthetic telemetry directly to Node 2 Evidence Triage; wired `query_loki_logs`, `find_slow_requests`, and `get_trace_by_id` to inspect cached telemetry before external network lookups while strictly routing all outputs through `ModelArmorClient.sanitize_tool_response()`; supported empty logs simulation in `edge` scenario (`logs_available=False`) alongside rich logs in `simple` and `complex` scenarios (`logs_available=True`).
+- In `backend/src/tools/evidence_triage_tools.py`: Forwarded `node_id` parameter directly into `active_client.query_loki_logs(...)`.
+- In `backend/src/main.py`: Registered incoming `mock_loki_lines` and `mock_tempo_spans` from `POST /sessions/{session_id}/inject-drift` directly into `GrafanaMCPClient` cache before initiating the workflow run.
+- In `backend/src/state/checkpointing.py`: Cached singleton `DatabaseSessionService` and `_tables_prepared` tracking flag to prevent redundant table preparations and connection pool churn on remote Cloud SQL; added automatic reload-and-retry loop (up to 3 attempts with backoff) on `StaleSessionError` in `save_checkpoint` to resolve optimistic concurrency collisions during concurrent event ingestion.
+- In `backend/.env`: Removed obsolete `OTEL_SDK_DISABLED=true` flag.
+- Created `backend/tests/unit/test_injected_telemetry.py` with 7 comprehensive unit tests covering injected telemetry caching, Model Armor screening, edge scenario gap handling, readiness probe, and connection failure fast-fail behavior.
+
+**Files Created:**
+- `backend/tests/unit/test_injected_telemetry.py` — Unit tests for simulated telemetry injection, caching, and fail-fast behavior.
+
+**Files Modified:**
+- `backend/scripts/simulate_drift.py` — Backend readiness check, fail-fast retry loop, 120s timeout, and localhost:8000 default.
+- `backend/src/tools/mcp_clients/grafana_mcp_client.py` — Injected telemetry caching, registration methods, and Model Armor sanitization.
+- `backend/src/tools/evidence_triage_tools.py` — Forwarded `node_id` in `query_loki_logs`.
+- `backend/src/main.py` — Registered injected telemetry in `/sessions/{session_id}/inject-drift`.
+- `backend/src/state/checkpointing.py` — Session service caching and `StaleSessionError` optimistic concurrency retry.
+- `backend/.env` — Removed `OTEL_SDK_DISABLED=true`.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/ -v`: 154 passed, 1 skipped in 6.39s (100% pass rate).
+- `uv run pytest tests/unit/test_injected_telemetry.py -v`: 7 passed in 0.50s.
+- `uv run pytest tests/evals/test_production_readiness.py -v`: 14 passed in 2.85s.
+- `pnpm build` (frontend): Zero errors, 1868 modules transformed in 2.23s.
+- Live CLI injection test: `simulate_drift.py --scenario simple` dispatched to `http://localhost:8000`, returned HTTP 202, and verified checkpoint `evidence_bundle` with `logs_available: True` and populated summaries.
+- Pass
+---
+
+
