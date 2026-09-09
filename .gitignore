@@ -86,3 +86,9 @@ CLAUDE.md
 # Internal specification docs (kept local only)
 docs/
 .docs/
+
+# Raw Demo Video Footage & Local Scratch Slides
+demo video/
+*.mp4
+*.mp3
+clipcrop_slides.html

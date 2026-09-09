@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GENLOCK SENTINEL — Autonomous Frame-Sync SRE Agent for ICVFX nDisplay Clusters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #070A11;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      color: #FFFFFF; cursor: pointer; user-select: none;
+    }
+
+    /* Subtle Hollywood Carbon Grid Background */
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .font-cinzel {
+      font-family: "Cinzel", Georgia, serif;
+    }
+
+    .font-mono {
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    /* ─── SLIDES TRANSITIONS ───────────────────────────────── */
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity .55s cubic-bezier(.16,1,.3,1), transform .55s cubic-bezier(.16,1,.3,1);
+      transform: translateX(70px);
+      z-index: 1;
+    }
+    .slide.active    { opacity: 1; pointer-events: all; transform: translateX(0); z-index: 2; }
+    .slide.exit-left { opacity: 0; transform: translateX(-70px); }
+    .slide.exit-right{ opacity: 0; transform: translateX(70px); }
+
+    /* ─── GLASS CARDS ─────────────────────────────────────── */
+    .glass         { background: rgba(13,19,33,0.72); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.12); border-radius: 1rem; }
+    .glass-cyan    { background: rgba(6,182,212,0.08); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(6,182,212,0.32);   border-radius: 1rem; }
+    .glass-rose    { background: rgba(244,63,94,0.08);  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(244,63,94,0.35);  border-radius: 1rem; }
+    .glass-amber   { background: rgba(245,158,11,0.08); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(245,158,11,0.35); border-radius: 1rem; }
+    .glass-em      { background: rgba(16,185,129,0.08); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(16,185,129,0.32); border-radius: 1rem; }
+
+    /* ─── GRADIENT TEXT ───────────────────────────────────── */
+    .gt-white   { background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 60%, #E2E8F0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gt-cyan    { background: linear-gradient(135deg, #06B6D4 0%, #38BDF8 50%, #A5F3FC 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gt-rose    { background: linear-gradient(135deg, #F43F5E 0%, #FB7185 50%, #FECDD3 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gt-amber   { background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 50%, #FEF08A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .gt-em      { background: linear-gradient(135deg, #10B981 0%, #34D399 50%, #A7F3D0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+    /* ─── AMBIENT GLOWS ───────────────────────────────────── */
+    .amb-rose    { background: radial-gradient(ellipse 65% 45% at 75% 25%, rgba(244,63,94,0.14) 0%, transparent 70%),
+                               radial-gradient(ellipse 55% 40% at 20% 80%, rgba(245,158,11,0.10) 0%, transparent 60%), #070A11; }
+    .amb-cyan    { background: radial-gradient(ellipse 70% 50% at 80% 20%, rgba(6,182,212,0.15) 0%, transparent 65%),
+                               radial-gradient(ellipse 60% 40% at 15% 85%, rgba(99,102,241,0.12) 0%, transparent 60%), #070A11; }
+    .amb-em      { background: radial-gradient(ellipse 65% 45% at 75% 25%, rgba(16,185,129,0.14) 0%, transparent 70%),
+                               radial-gradient(ellipse 55% 40% at 20% 80%, rgba(6,182,212,0.10) 0%, transparent 60%), #070A11; }
+
+    /* ─── METRIC CARDS ────────────────────────────────────── */
+    .metric-cyan   { background: rgba(6,182,212,0.09);  border: 1px solid rgba(6,182,212,0.38);  border-radius: 0.875rem; padding: 1rem 1.15rem; }
+    .metric-rose   { background: rgba(244,63,94,0.09);  border: 1px solid rgba(244,63,94,0.38);  border-radius: 0.875rem; padding: 1rem 1.15rem; }
+    .metric-amber  { background: rgba(245,158,11,0.09); border: 1px solid rgba(245,158,11,0.38); border-radius: 0.875rem; padding: 1rem 1.15rem; }
+    .metric-em     { background: rgba(16,185,129,0.09); border: 1px solid rgba(16,185,129,0.38); border-radius: 0.875rem; padding: 1rem 1.15rem; }
+
+    /* ─── FEATURE ICONS ───────────────────────────────────── */
+    .feat-icon-rose   { width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:rgba(244,63,94,0.16); border:1px solid rgba(244,63,94,0.45); border-radius:10px; flex-shrink:0; }
+    .feat-icon-rose svg { width:20px; height:20px; stroke:#FB7185; }
+    .feat-icon-amber  { width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:rgba(245,158,11,0.16); border:1px solid rgba(245,158,11,0.45); border-radius:10px; flex-shrink:0; }
+    .feat-icon-amber svg { width:20px; height:20px; stroke:#FBBF24; }
+    .feat-icon-cyan   { width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:rgba(6,182,212,0.16); border:1px solid rgba(6,182,212,0.45); border-radius:10px; flex-shrink:0; }
+    .feat-icon-cyan svg { width:20px; height:20px; stroke:#38BDF8; }
+    .feat-icon-em     { width:42px; height:42px; display:flex; align-items:center; justify-content:center; background:rgba(16,185,129,0.16); border:1px solid rgba(16,185,129,0.45); border-radius:10px; flex-shrink:0; }
+    .feat-icon-em svg { width:20px; height:20px; stroke:#34D399; }
+
+    /* ─── PILL BADGES ─────────────────────────────────────── */
+    .pill-rose  { display:inline-flex; align-items:center; gap:8px; background:rgba(244,63,94,0.14); border:1px solid rgba(244,63,94,0.45); border-radius:999px; padding:5px 16px; width:fit-content; }
+    .pill-cyan  { display:inline-flex; align-items:center; gap:8px; background:rgba(6,182,212,0.14); border:1px solid rgba(6,182,212,0.45); border-radius:999px; padding:5px 16px; width:fit-content; }
+    .pill-em    { display:inline-flex; align-items:center; gap:8px; background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.45); border-radius:999px; padding:5px 16px; width:fit-content; }
+
+    /* ─── IMAGE GLOWS ─────────────────────────────────────── */
+    .img-glow-amber  { border:1px solid rgba(245,158,11,0.4); box-shadow:0 0 50px rgba(245,158,11,0.28), 0 24px 60px rgba(0,0,0,0.85); border-radius:1.15rem; }
+    .img-glow-rose   { border:1px solid rgba(244,63,94,0.4); box-shadow:0 0 50px rgba(244,63,94,0.28), 0 24px 60px rgba(0,0,0,0.85); border-radius:1.15rem; }
+    .img-glow-cyan   { border:1px solid rgba(6,182,212,0.4);  box-shadow:0 0 55px rgba(6,182,212,0.28), 0 24px 60px rgba(0,0,0,0.85); border-radius:1.15rem; }
+    .img-glow-em     { border:1px solid rgba(16,185,129,0.4); box-shadow:0 0 50px rgba(16,185,129,0.28), 0 24px 60px rgba(0,0,0,0.85); border-radius:1.15rem; }
+
+    /* ─── PROGRESS BAR ────────────────────────────────────── */
+    .prog-track { height:3px; background:rgba(255,255,255,0.08); }
+    .prog-fill  { height:100%; border-radius:2px; background:linear-gradient(90deg, #06B6D4 0%, #6366F1 50%, #10B981 100%); transition:width .5s cubic-bezier(.16,1,.3,1); box-shadow:0 0 10px rgba(6,182,212,0.8); }
+
+    /* ─── KEYFRAMES & ANIMATIONS ──────────────────────────── */
+    @keyframes float     { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-8px)} }
+    @keyframes dotPulse  { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.3; transform:scale(.85);} }
+    @keyframes radarBeam { 0%{transform:rotate(0deg);} 100%{transform:rotate(360deg);} }
+
+    .float-a   { animation: float 6s ease-in-out infinite; }
+    .pulse-dot { animation: dotPulse 2s infinite; }
+    ::-webkit-scrollbar { display: none; }
+
+    /* ─── STEP NODES (SLIDE 2) ────────────────────────────── */
+    .step-node {
+      display:flex; align-items:center; gap:10px; padding:7px 11px;
+      background:rgba(13,19,33,0.85); border:1px solid rgba(255,255,255,0.12);
+      border-radius:9px; transition:all .2s ease;
+    }
+    .step-node:hover {
+      background:rgba(6,182,212,0.12); border-color:rgba(6,182,212,0.45);
+      transform:translateX(2px);
+    }
+    .step-num {
+      width:24px; height:24px; border-radius:6px; background:rgba(6,182,212,0.18);
+      color:#38BDF8; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; border:1px solid rgba(6,182,212,0.4);
+    }
+
+    /* ─── DOT NAVIGATION ──────────────────────────────────── */
+    .nav-dot {
+      width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.22);
+      transition:all .3s ease; cursor:pointer;
+    }
+    .nav-dot.active {
+      width:24px; border-radius:999px; background:linear-gradient(90deg, #06B6D4, #10B981);
+      box-shadow:0 0 12px rgba(6,182,212,0.75);
+    }
+
+    /* ─── SMART SVG HUD FALLBACKS ─────────────────────────── */
+    .hud-svg-box {
+      width:100%; height:100%; border-radius:1.15rem; background:#070A11;
+      border:1px solid rgba(244,63,94,0.4); display:flex; flex-direction:column;
+      padding:16px; position:relative; overflow:hidden;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════ TOP HEADER ════════════════════════════ -->
+<header style="position:fixed;top:0;left:0;right:0;z-index:100;height:58px;
+            background:rgba(7,10,17,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+            border-bottom:1px solid rgba(255,255,255,0.1);
+            display:flex;align-items:center;justify-content:space-between;padding:0 36px;">
+  
+  <!-- Left: Branding & Subtitle -->
+  <div style="display:flex;align-items:center;gap:13px;">
+    <img src="../assets/logo.png" alt="Genlock Sentinel Logo"
+         style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(6,182,212,0.7));flex-shrink:0;"
+         onerror="this.src='assets/logo.png'; this.onerror=function(){this.style.display='none';};" />
+    <div style="display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="font-cinzel" style="font-size:16px;font-weight:900;letter-spacing:.08em;color:#FFFFFF;">GENLOCK <span style="color:#06B6D4;">SENTINEL</span></span>
+      </div>
+      <span style="font-size:11px;font-weight:500;color:#FFFFFF;letter-spacing:.02em;margin-top:-1px;">
+        Autonomous Genlock &amp; Frame-Sync SRE Agent for ICVFX nDisplay Clusters
+      </span>
+    </div>
+  </div>
+
+  <!-- Center: Track Info Pill -->
+  <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);padding:5px 16px;border-radius:999px;">
+    <span style="font-size:11.5px;font-weight:700;color:#FFFFFF;">Google Cloud Agentic Cinema</span>
+    <span style="color:rgba(255,255,255,0.4);">&bull;</span>
+    <span style="font-size:11.5px;font-weight:800;color:#38BDF8;">Enterprise Agent &amp; Grafana Labs Tracks</span>
+  </div>
+
+  <!-- Right: Status Badge -->
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="pulse-dot" style="width:9px;height:9px;border-radius:50%;background:#10B981;box-shadow:0 0 14px rgba(16,185,129,0.95);"></div>
+    <div style="display:flex;flex-direction:column;text-align:right;">
+      <span style="font-size:11.5px;font-weight:900;color:#10B981;letter-spacing:.04em;text-transform:uppercase;">228 / 228 TESTS PASSING (100%)</span>
+      <span style="font-size:10.5px;font-weight:600;color:#FFFFFF;">Sub-Second Remediation &bull; Air-Gapped State</span>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════ PROGRESS BAR ════════════════════════ -->
+<div class="prog-track" style="position:fixed;top:58px;left:0;right:0;z-index:99;">
+  <div class="prog-fill" id="progressFill" style="width:33.33%;"></div>
+</div>
+
+<!-- ════════════════════════════ CORNER CONTROLS ═════════════════════ -->
+<!-- Center Nav Dots (Strictly 3) -->
+<nav aria-label="Slide Navigation" id="dotNav" style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:8px;opacity:.75;transition:opacity .3s ease;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='.75'">
+  <button aria-label="Go to Slide 1" class="nav-dot active" onclick="window.goToSlide(0)"></button>
+  <button aria-label="Go to Slide 2" class="nav-dot" onclick="window.goToSlide(1)"></button>
+  <button aria-label="Go to Slide 3" class="nav-dot" onclick="window.goToSlide(2)"></button>
+</nav>
+
+<!-- Right Slide Counter (Initial 1 / 3) -->
+<div id="slideCounter" style="position:fixed;bottom:12px;right:28px;z-index:100;
+     font-size:11.5px;font-weight:800;letter-spacing:.12em;
+     color:#FFFFFF;text-transform:uppercase;background:rgba(255,255,255,0.06);
+     border:1px solid rgba(255,255,255,0.15);padding:3px 14px;border-radius:999px;">
+  1 / 3
+</div>
+
+<!-- ════════════════════════════ SLIDE CONTAINER ═════════════════════ -->
+<div id="slideContainer" style="position:fixed;top:61px;left:0;right:0;bottom:0;overflow:hidden;">
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SLIDE 1 — THE MICROSECOND CRISIS & STAGE BURN CATASTROPHE (0:00 – 0:25)
+══════════════════════════════════════════════════════════════════ -->
+<section aria-label="Slide 1: The Microsecond Crisis &amp; Stage Burn Catastrophe" class="slide active amb-rose" id="slide-1">
+  <div style="width:100%;max-width:1540px;display:grid;grid-template-columns:1.15fr 0.95fr;gap:40px;padding:20px 52px;align-items:center;max-height:calc(100vh - 84px);">
+
+    <!-- LEFT HERO & FEATURES -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div class="pill-rose">
+        <div class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:#F43F5E;box-shadow:0 0 10px rgba(244,63,94,0.9);"></div>
+        <span style="font-size:11px;font-weight:800;color:#FB7185;letter-spacing:.08em;text-transform:uppercase;">
+          CRITICAL ICVFX ANOMALY &bull; 150&micro;s FRAME-SYNC COLLAPSE
+        </span>
+      </div>
+
+      <div>
+        <h1 style="font-size:clamp(1.75rem,2.8vw,2.6rem);font-weight:900;line-height:1.1;margin:0 0 8px;letter-spacing:-.03em;">
+          <span class="gt-white">150&micro;s Sync Drift, Baked-In Defects /</span><br/>
+          <span class="gt-rose">$1,800/min Virtual Production Catastrophe.</span>
+        </h1>
+        <p style="color: #FFFFFF; font-size: 0.98rem; font-weight: 500; line-height: 1.5; margin: 0;">
+          When multi-node Unreal Engine nDisplay clusters drift past 150&micro;s during live filming takes, the camera shutter captures scanline tearing, motion-blur phase disparity, and rollbars permanently baked into raw footage.
+        </p>
+      </div>
+
+      <!-- Feature Cards (Vertical Stack) -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+
+        <div class="glass-rose" style="padding:12px 16px;display:flex;align-items:center;gap:14px;">
+          <div class="feat-icon-rose"><i data-lucide="camera-off"></i></div>
+          <div>
+            <div style="font-size:13.5px;font-weight:800;color:#FFFFFF;margin-bottom:2px;">Permanent Raw Footage Destruction</div>
+            <div style="font-size:12px;font-weight:500;color:#FFFFFF;line-height:1.4;">Scanlines and sync rolling baked live into camera frames; zero recourse in post-production.</div>
+          </div>
+        </div>
+
+        <div class="glass-amber" style="padding:12px 16px;display:flex;align-items:center;gap:14px;">
+          <div class="feat-icon-amber"><i data-lucide="clock-alert"></i></div>
+          <div>
+            <div style="font-size:13.5px;font-weight:800;color:#FFFFFF;margin-bottom:2px;">Crippling Diagnostic Dead Time</div>
+            <div style="font-size:12px;font-weight:500;color:#FFFFFF;line-height:1.4;">Manual log grepping across 16+ nodes takes 3&ndash;15 minutes while stage burn costs $1,800/minute ($108,000/hour).</div>
+          </div>
+        </div>
+
+        <div class="glass-rose" style="padding:12px 16px;display:flex;align-items:center;gap:14px;">
+          <div class="feat-icon-rose"><i data-lucide="zap-off"></i></div>
+          <div>
+            <div style="font-size:13.5px;font-weight:800;color:#FFFFFF;margin-bottom:2px;">Catastrophic Actuation Risk</div>
+            <div style="font-size:12px;font-weight:500;color:#FFFFFF;line-height:1.4;">Blind cluster reboots or ungrounded parameter tweaks crash live LED volumes and ruin active camera takes.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- RIGHT VISUAL ASSET -->
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <div style="position:relative;width:100%;max-width:580px;aspect-ratio:16/9;">
+        <div style="position:absolute;inset:-24px;background:radial-gradient(ellipse at center,rgba(244,63,94,0.22) 0%,transparent 70%);pointer-events:none;border-radius:50%;z-index:0;"></div>
+        <img
+          id="img-s1"
+          src="slide1_stage_burn.png"
+          alt="150&micro;s Frame-Sync Drift Stage Burn Catastrophe"
+          class="img-glow-rose float-a"
+          style="width:100%;height:100%;object-fit:cover;object-position:center;border-radius:1.15rem;display:block;position:relative;z-index:1;"
+          onerror="this.src='presentation/slide1_stage_burn.png'; this.onerror=function(){this.src='../assets/dashboard_hud_telemetry_waveform.png'; this.onerror=function(){this.src='assets/dashboard_hud_telemetry_waveform.png'; this.onerror=function(){this.style.display='none';document.getElementById('ph-s1').style.display='flex';};};};"
+        />
+        <!-- Smart Fallback HUD Box -->
+        <div id="ph-s1" class="hud-svg-box" style="display:none;z-index:1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(244,63,94,0.3);padding-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#F43F5E;">
+              <i data-lucide="alert-triangle" style="width:14px;height:14px;"></i>
+              <span>CRITICAL BREACH: 212.8&micro;s (LIMIT: 150&micro;s)</span>
+            </div>
+            <div class="font-mono" style="font-size:11px;font-weight:800;color:#F43F5E;">BURNING: $1,800/MIN</div>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;">
+            <svg viewBox="0 0 500 180" style="width:100%;height:100%;">
+              <line x1="0" y1="90" x2="500" y2="90" stroke="#F43F5E" stroke-dasharray="4,4" stroke-width="1.5" />
+              <text x="10" y="82" fill="#F43F5E" font-size="10" font-weight="700">150&micro;s HARD THRESHOLD PERIMETER</text>
+              <path d="M 0,140 Q 100,135 200,142 T 300,45 T 400,120 T 500,138" fill="none" stroke="#F43F5E" stroke-width="3" />
+              <circle cx="300" cy="45" r="5" fill="#F43F5E" />
+            </svg>
+          </div>
+          <div style="font-size:10.5px;font-weight:700;color:#FFFFFF;text-align:center;">
+            Node 04 (Render-04) VSync Phase Shift &bull; Live ICVFX Scanline Tearing
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SLIDE 2 — DUAL-MODEL VERTEX AI & 7-NODE ADK ARCHITECTURE (0:25 – 0:50)
+══════════════════════════════════════════════════════════════════ -->
+<section aria-label="Slide 2: Dual-Model Vertex AI &amp; 7-Node ADK Architecture" class="slide amb-cyan" id="slide-2">
+  <div style="width:100%;max-width:1560px;display:grid;grid-template-columns:1.24fr 0.9fr;gap:36px;padding:18px 50px;align-items:center;max-height:calc(100vh - 84px);">
+
+    <!-- LEFT HERO & 7-NODE ADK WORKFLOW -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <div class="pill-cyan">
+        <div class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:#06B6D4;box-shadow:0 0 10px rgba(6,182,212,0.9);"></div>
+        <span style="font-size:11px;font-weight:800;color:#38BDF8;letter-spacing:.08em;text-transform:uppercase;">
+          ENTERPRISE AGENT PLATFORM &bull; GOOGLE ADK 2.8.0 WORKFLOW RUNTIME
+        </span>
+      </div>
+
+      <div>
+        <h2 style="font-size:clamp(1.75rem,2.8vw,2.55rem);font-weight:900;line-height:1.1;margin:0 0 6px;letter-spacing:-.03em;">
+          <span class="gt-white">Dual-Model Vertex AI Topology /</span><br/>
+          <span class="gt-cyan">Deterministic Dual-Routing Engine.</span>
+        </h2>
+        <p style="color: #FFFFFF; font-size: 0.96rem; font-weight: 500; line-height: 1.45; margin: 0;">
+          Built on Google ADK 2.8.0, Genlock Sentinel orchestrates an authoritative 7-node directed graph isolating cognitive reasoning from high-stakes actuators, ensuring zero hallucination and sub-second recovery.
+        </p>
+      </div>
+
+      <!-- 7-Node Interactive Workflow Grid (Compact 2-Column Grid) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+        
+        <!-- Node 1 -->
+        <div class="step-node">
+          <div class="step-num">01</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#FFFFFF;">Stream Watch (Non-LLM)</div>
+            <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">VSync telemetry listener &bull; 150&micro;s breach perimeter</div>
+          </div>
+        </div>
+
+        <!-- Node 2 -->
+        <div class="step-node" style="border-color:rgba(6,182,212,0.35);">
+          <div class="step-num" style="background:rgba(6,182,212,0.22);color:#38BDF8;border-color:rgba(6,182,212,0.45);">02</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#FFFFFF;">Evidence Triage (Gemini 3.7 Flash)</div>
+            <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">Parallel Grafana MCP &bull; Loki logs &amp; Tempo traces</div>
+          </div>
+        </div>
+
+        <!-- Node 3 -->
+        <div class="step-node" style="border-color:rgba(99,102,241,0.35);">
+          <div class="step-num" style="background:rgba(99,102,241,0.22);color:#818CF8;border-color:rgba(99,102,241,0.45);">03</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#FFFFFF;">Root-Cause Correlation (Gemini 3.1 Pro)</div>
+            <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">Zero-temp reasoning &bull; Strict Pydantic V2 schemas</div>
+          </div>
+        </div>
+
+        <!-- Node 4 -->
+        <div class="step-node" style="border-color:rgba(16,185,129,0.35);">
+          <div class="step-num" style="background:rgba(16,185,129,0.22);color:#10B981;border-color:rgba(16,185,129,0.45);">04</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#FFFFFF;">Autonomous Dispatch (Deterministic)</div>
+            <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">Reversible failover actuators in &lt; 800ms</div>
+          </div>
+        </div>
+
+        <!-- Node 5 -->
+        <div class="step-node" style="border-color:rgba(245,158,11,0.35);">
+          <div class="step-num" style="background:rgba(245,158,11,0.22);color:#F59E0B;border-color:rgba(245,158,11,0.45);">05</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#FFFFFF;">HITL Card Generation (Gemini 3.7 Flash)</div>
+            <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">Non-dismissible package &bull; $2,450 financial impact</div>
+          </div>
+        </div>
+
+        <!-- Node 6 -->
+        <div class="step-node" style="border-color:rgba(244,63,94,0.35);">
+          <div class="step-num" style="background:rgba(244,63,94,0.22);color:#FB7185;border-color:rgba(244,63,94,0.45);">06</div>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:#FFFFFF;">HITL Pause (LongRunningFunctionTool)</div>
+            <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">Durable ADK interrupt &bull; Cloud SQL checkpointing</div>
+          </div>
+        </div>
+
+        <!-- Node 7 (Spans full width for balance) -->
+        <div class="step-node" style="grid-column: span 2; border-color:rgba(16,185,129,0.4); background:rgba(16,185,129,0.08);">
+          <div class="step-num" style="background:rgba(16,185,129,0.25);color:#34D399;border-color:rgba(16,185,129,0.5);">07</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
+            <div>
+              <div style="font-size:12px;font-weight:800;color:#FFFFFF;">Post-Approval Handling (Deterministic Actuation)</div>
+              <div style="font-size:11px;font-weight:500;color:#FFFFFF;line-height:1.3;">High-stakes actuators: <span class="font-mono" style="color:#A7F3D0;font-weight:700;">halt_live_take</span> &bull; <span class="font-mono" style="color:#A7F3D0;font-weight:700;">fallback_to_greenscreen</span></div>
+            </div>
+            <span style="font-size:10px;font-weight:800;color:#10B981;background:rgba(16,185,129,0.18);padding:3px 8px;border-radius:4px;white-space:nowrap;margin-left:8px;">Supervisor Gated</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Google Model Armor Callout Strip -->
+      <div class="glass" style="padding:8px 14px;border-color:rgba(6,182,212,0.3);display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="shield-check" style="width:18px;height:18px;stroke:#06B6D4;flex-shrink:0;"></i>
+          <span style="font-size:11px;font-weight:700;color:#FFFFFF;">
+            Google Model Armor: Untrusted cluster telemetry screened for OWASP LLM01 prompt injection &amp; LLM02 credential leakage before model context.
+          </span>
+        </div>
+        <span style="font-size:10px;font-weight:800;color:#06B6D4;background:rgba(6,182,212,0.18);padding:3px 9px;border-radius:4px;white-space:nowrap;margin-left:12px;">Active Shield</span>
+      </div>
+
+    </div>
+
+    <!-- RIGHT VISUAL ASSET -->
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <div style="position:relative;width:100%;max-width:540px;aspect-ratio:16/9;">
+        <div style="position:absolute;inset:-24px;background:radial-gradient(ellipse at center,rgba(6,182,212,0.25) 0%,transparent 70%);pointer-events:none;border-radius:50%;z-index:0;"></div>
+        <img
+          id="img-s2"
+          src="slide2_adk_architecture.png"
+          alt="Dual-Model Vertex AI 7-Node ADK Architecture"
+          class="img-glow-cyan float-a"
+          style="width:100%;height:100%;object-fit:cover;object-position:center;border-radius:1.15rem;display:block;position:relative;z-index:1;"
+          onerror="this.src='presentation/slide2_adk_architecture.png'; this.onerror=function(){this.src='../assets/dashboard_autonomous_healing.png'; this.onerror=function(){this.src='assets/dashboard_autonomous_healing.png'; this.onerror=function(){this.style.display='none';};};};"
+        />
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SLIDE 3 — PRODUCTION BENCHMARK, 228 TESTS & DUAL-TRACK DELIVERY (2:35 – 2:55)
+══════════════════════════════════════════════════════════════════ -->
+<section aria-label="Slide 3: Production Benchmark, 228 Tests &amp; Dual-Track Delivery" class="slide amb-em" id="slide-3">
+  <div style="width:100%;max-width:1540px;display:grid;grid-template-columns:1.15fr 0.95fr;gap:40px;padding:20px 52px;align-items:center;max-height:calc(100vh - 84px);">
+
+    <!-- LEFT: PRODUCTION BENCHMARKS -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div class="pill-em">
+        <div class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:#10B981;box-shadow:0 0 10px rgba(16,185,129,0.9);"></div>
+        <span style="font-size:11px;font-weight:800;color:#34D399;letter-spacing:.08em;text-transform:uppercase;">
+          PRODUCTION CERTIFICATION &bull; DUAL HACKATHON TRACK DELIVERY
+        </span>
+      </div>
+
+      <div>
+        <h2 style="font-size:clamp(1.75rem,2.8vw,2.6rem);font-weight:900;line-height:1.1;margin:0 0 8px;letter-spacing:-.03em;">
+          <span class="gt-em">228 / 228 Automated Tests Passing /</span><br/>
+          <span class="gt-white">Cloud SQL &amp; Grafana MCP Live Ingestion.</span>
+        </h2>
+        <p style="color: #FFFFFF; font-size: 0.98rem; font-weight: 500; line-height: 1.5; margin: 0;">
+          Engineered with zero dummy shortcuts, complete air-gapped state durability, and live bi-directional Grafana Cloud observability, Genlock Sentinel brings enterprise SRE reliability to virtual stages worldwide.
+        </p>
+      </div>
+
+      <!-- 3 Large Metric Cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;">
+        
+        <div class="metric-cyan">
+          <div style="font-size:10px;font-weight:800;color:#38BDF8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Autonomous Recovery</div>
+          <div class="font-mono" style="font-size:1.85rem;font-weight:900;color:#06B6D4;line-height:1;letter-spacing:-.03em;text-shadow:0 0 16px rgba(6,182,212,0.6);">&lt; 800ms</div>
+          <div style="font-size:11.5px;font-weight:600;color:#FFFFFF;margin-top:5px;line-height:1.3;">Zero Take Interruptions</div>
+        </div>
+
+        <div class="metric-rose">
+          <div style="font-size:10px;font-weight:800;color:#FB7185;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">HITL Financial Gate</div>
+          <div class="font-mono" style="font-size:1.85rem;font-weight:900;color:#F43F5E;line-height:1;letter-spacing:-.03em;text-shadow:0 0 16px rgba(244,63,94,0.6);">$2,450</div>
+          <div style="font-size:11.5px;font-weight:600;color:#FFFFFF;margin-top:5px;line-height:1.3;">Supervisor Risk Authorization</div>
+        </div>
+
+        <div class="metric-em">
+          <div style="font-size:10px;font-weight:800;color:#34D399;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Test Suite Pass</div>
+          <div class="font-mono" style="font-size:1.85rem;font-weight:900;color:#10B981;line-height:1;letter-spacing:-.03em;text-shadow:0 0 16px rgba(16,185,129,0.6);">228 / 228</div>
+          <div style="font-size:11.5px;font-weight:600;color:#FFFFFF;margin-top:5px;line-height:1.3;">100% Pytest &amp; Red-Team Suite</div>
+        </div>
+
+      </div>
+
+      <!-- Master Enterprise Stack Banner -->
+      <div class="glass-em" style="padding:13px 18px;border-color:rgba(16,185,129,0.4);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;">
+          <i data-lucide="layers" style="width:16px;height:16px;stroke:#10B981;flex-shrink:0;"></i>
+          <span style="font-size:12.5px;font-weight:900;color:#FFFFFF;letter-spacing:.02em;">
+            ENTERPRISE ARCHITECTURE INTEGRATION MATRIX
+          </span>
+        </div>
+        <div style="font-size:11.5px;font-weight:600;color:#FFFFFF;line-height:1.45;">
+          <span style="color:#A5F3FC;font-weight:700;">Google Cloud SQL PostgreSQL (asyncpg)</span> &bull; 
+          <span style="color:#FEF08A;font-weight:700;">Grafana Cloud Loki &amp; Tempo MCP (Live HTTP 204)</span> &bull; 
+          <span style="color:#A7F3D0;font-weight:700;">RFC 6902 AG-UI SSE Protocol</span> &bull; 
+          <span style="color:#FECDD3;font-weight:700;">Constitutional Silence-Over-Guessing Guarantee</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT VISUAL ASSET -->
+    <div style="display:flex;align-items:center;justify-content:center;">
+      <div style="position:relative;width:100%;max-width:580px;aspect-ratio:16/9;">
+        <div style="position:absolute;inset:-24px;background:radial-gradient(ellipse at center,rgba(16,185,129,0.22) 0%,transparent 70%);pointer-events:none;border-radius:50%;z-index:0;"></div>
+        <img
+          id="img-s3"
+          src="slide3_cloud_verification.png"
+          alt="Production Verification &amp; Cloud Operations"
+          class="img-glow-em float-a"
+          style="width:100%;height:100%;object-fit:cover;object-position:center;border-radius:1.15rem;display:block;position:relative;z-index:1;"
+          onerror="this.src='presentation/slide3_cloud_verification.png'; this.onerror=function(){this.src='../assets/grafana_cloud_mcp_explorer.png'; this.onerror=function(){this.src='assets/grafana_cloud_mcp_explorer.png'; this.onerror=function(){this.style.display='none';};};};"
+        />
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- /slideContainer -->
+
+<script>
+  // ─── Interactive 3-Slide Carousel Engine ─────────────────────────
+  (function () {
+    var TOTAL        = 3; // Strictly 3 slides
+    var current      = 0;
+    var transitioning= false;
+    var slides       = document.querySelectorAll('.slide');
+    var progressFill = document.getElementById('progressFill');
+    var slideCounter = document.getElementById('slideCounter');
+    var dotNav       = document.getElementById('dotNav');
+
+    function updateUI() {
+      if (progressFill) {
+        progressFill.style.width = (((current + 1) / TOTAL) * 100) + '%';
+      }
+      if (slideCounter) {
+        slideCounter.textContent  = (current + 1) + ' / ' + TOTAL;
+      }
+      
+      // Update dots
+      if (dotNav) {
+        var dots = dotNav.querySelectorAll('.nav-dot');
+        dots.forEach(function(dot, idx) {
+          if (idx === current) {
+            dot.classList.add('active');
+          } else {
+            dot.classList.remove('active');
+          }
+        });
+      }
+    }
+
+    function goToSlide(index, dir) {
+      if (typeof dir === 'undefined') dir = index > current ? 1 : -1;
+      if (transitioning || index === current || index < 0 || index >= TOTAL) return;
+      transitioning = true;
+      var prev = current;
+      current  = index;
+      
+      slides[prev].classList.add(dir >= 0 ? 'exit-left' : 'exit-right');
+      setTimeout(function() { 
+        slides[prev].classList.remove('active', 'exit-left', 'exit-right'); 
+      }, 550);
+      
+      slides[current].style.transform = dir >= 0 ? 'translateX(70px)' : 'translateX(-70px)';
+      setTimeout(function() {
+        slides[current].style.transform = '';
+        slides[current].classList.add('active');
+        if (window.lucide) lucide.createIcons();
+      }, 20);
+      
+      updateUI();
+      setTimeout(function() { transitioning = false; }, 600);
+    }
+
+    function nextSlide() { goToSlide(current + 1,  1); }
+    function prevSlide() { goToSlide(current - 1, -1); }
+
+    // Expose goToSlide globally for dot clicks
+    window.goToSlide = function(idx) {
+      goToSlide(idx);
+    };
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { 
+        e.preventDefault(); 
+        nextSlide(); 
+      }
+      if (e.key === 'ArrowLeft'  || e.key === 'PageUp') { 
+        e.preventDefault(); 
+        prevSlide(); 
+      }
+      if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(0, -1);
+      }
+      if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(TOTAL - 1, 1);
+      }
+      if (e.key === 'F11') {
+        e.preventDefault();
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+
+    // Click navigation (left half = prev, right half = next)
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('a, button, input, select, textarea, .nav-dot, #dotNav')) return;
+      if (e.clientX > window.innerWidth / 2) nextSlide(); 
+      else prevSlide();
+    });
+
+    // Touch swipe support
+    var tX = 0;
+    document.addEventListener('touchstart', function(e) { tX = e.touches[0].clientX; }, { passive: true });
+    document.addEventListener('touchend',   function(e) {
+      var d = tX - e.changedTouches[0].clientX;
+      if (Math.abs(d) > 50) { 
+        if (d > 0) nextSlide(); 
+        else prevSlide(); 
+      }
+    }, { passive: true });
+
+    // Initialize Lucide Icons & UI
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+    updateUI();
+  })();
+</script>
+</body>
+</html>
