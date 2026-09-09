@@ -57,7 +57,24 @@ async def hitl_pause_node(
     state = get_or_init_state(ctx)
 
     if state.approval_state == ApprovalStatus.PENDING or state.approval_state is None:
-        card_id = state.pending_hitl_card.card_id if state.pending_hitl_card else "pending_hitl_card"
+        card = state.pending_hitl_card
+        card_id = card.card_id if card else "pending_hitl_card"
+        session_id = state.session_id or "session-default"
+        run_id = getattr(getattr(ctx, "session", None), "id", None) or f"run-{card_id}"
+
+        # Notify coordinator to emit RUN_PAUSED and broadcast pending card deltas
+        try:
+            from src.ui.hitl_resumption import get_hitl_coordinator
+            await get_hitl_coordinator().notify_paused(
+                session_id=session_id,
+                run_id=run_id,
+                card=card,
+                reason="hitl_approval_required",
+            )
+        except Exception:
+            # Defensive execution: allow graph suspension even without SSE subscribers
+            pass
+
         yield Event(
             author="node6_hitl_pause",
             long_running_tool_ids=["hitl_supervisor_approval"],

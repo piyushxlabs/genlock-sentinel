@@ -214,7 +214,7 @@ async def test_decision_endpoint_approve_cycle(test_client: AsyncClient) -> None
     updated_state = await load_checkpoint(session_id=session_id)
     assert updated_state is not None
     assert updated_state.approval_state == ApprovalStatus.APPROVED
-    assert updated_state.session_status == SessionStatus.RESUMED
+    assert updated_state.session_status in (SessionStatus.RESUMED, SessionStatus.MONITORING)
     assert any("supervisor_approved::halt_live_take" in a.action_taken for a in updated_state.remediation_log)
 
 

@@ -30,6 +30,11 @@ from src.state.schema import (
     utc_now_iso,
 )
 from src.ui.agui_bridge import get_event_bridge
+from src.ui.hitl_resumption import (
+    DecisionRequest,
+    DecisionResponse,
+    get_hitl_coordinator,
+)
 
 
 # ------------------------------------------------------------------------------
@@ -76,30 +81,7 @@ class HealthResponse(BaseModel):
     vertex_ai_enabled: bool = Field(..., description="Vertex AI client configuration flag")
 
 
-class DecisionRequest(BaseModel):
-    """Supervisor decision payload for pending HITL operation."""
-
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    action: Literal["approve", "deny"] = Field(..., description="Decision action: 'approve' or 'deny'")
-    checkpoint_id: str = Field(..., description="Checkpoint ID matching pending card (e.g. hitl_pause::<event_id>)")
-    modified_inputs: Optional[Dict[str, Any]] = Field(
-        default=None, description="Must be None (no editable fields exist)"
-    )
-    reason: Optional[str] = Field(default=None, description="Optional supervisor-supplied denial reason")
-
-
-class DecisionResponse(BaseModel):
-    """Response returned upon processing supervisor decision."""
-
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    status: str = Field(..., description="Operation result status: 'accepted'")
-    session_id: str = Field(..., description="Active session ID")
-    event_id: str = Field(..., description="Drift event ID")
-    action: str = Field(..., description="Approved or denied action")
-    approval_state: str = Field(..., description="Resulting approval_state in state")
-    checkpoint_id: str = Field(..., description="Matched checkpoint ID")
+# DecisionRequest and DecisionResponse are imported from src.ui.hitl_resumption
 
 
 class StopSessionRequest(BaseModel):
@@ -123,8 +105,6 @@ class StopSessionResponse(BaseModel):
 
 
 HealthResponse.model_rebuild()
-DecisionRequest.model_rebuild()
-DecisionResponse.model_rebuild()
 StopSessionRequest.model_rebuild()
 StopSessionResponse.model_rebuild()
 
@@ -276,94 +256,23 @@ async def submit_decision(
 ) -> DecisionResponse:
     """Processes supervisor Approve or Deny decisions for pending HITL cards.
 
-    Performs strict validation per INTERFACE_OBSERVABILITY_SYSTEM.md Section 5:
+    Delegates to HITLResumptionCoordinator per AGENT_MASTER_PLAN.md Section 7 & 10 (Step 16)
+    and INTERFACE_OBSERVABILITY_SYSTEM.md Section 5:
     - Verifies session exists in checkpoint storage.
     - Verifies pending_hitl_card exists and matches event_id.
     - Rejects any non-null modified_inputs (no editable fields permitted).
     - Verifies checkpoint_id matches pending checkpoint.
-    - Updates approval_state, session_status, logs audit action, and saves checkpoint.
+    - On Approve: updates approval_state, resumes session, logs approval,
+      dispatches Node 7 (post-approval tool execution), broadcasts AG-UI SSE events,
+      and saves checkpoint.
+    - On Deny: updates approval_state, returns to monitoring, logs audit denial
+      to error_logs and remediation_log, broadcasts AG-UI SSE events, and saves checkpoint.
     """
-    if payload.modified_inputs is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Modifying inputs is not permitted at this checkpoint (strict Approve/Deny only).",
-        )
-
-    state = await load_checkpoint(session_id=session_id)
-    if state is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session '{session_id}' not found.",
-        )
-
-    if state.pending_hitl_card is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"No pending HITL card found for session '{session_id}'.",
-        )
-
-    card = state.pending_hitl_card
-    if card.event_id != event_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Event ID mismatch: pending card is for '{card.event_id}', but received '{event_id}'.",
-        )
-
-    valid_checkpoint_ids = {
-        f"hitl_pause::{card.event_id}",
-        card.card_id,
-        card.event_id,
-    }
-    if payload.checkpoint_id not in valid_checkpoint_ids:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Checkpoint ID mismatch: '{payload.checkpoint_id}' does not match pending card checkpoint.",
-        )
-
-    # Apply decision mutation
-    if payload.action == "approve":
-        state.approval_state = ApprovalStatus.APPROVED
-        state.session_status = SessionStatus.RESUMED
-        state.remediation_log.append(
-            RemediationAction(
-                event_id=event_id,
-                node_id=card.node_id,
-                action_taken=f"supervisor_approved::{card.proposed_action}",
-                success=True,
-                details={"checkpoint_id": payload.checkpoint_id},
-            )
-        )
-    else:
-        state.approval_state = ApprovalStatus.DENIED
-        state.session_status = SessionStatus.MONITORING
-        state.error_logs.append(
-            ErrorRecord(
-                event_id=event_id,
-                node_id=card.node_id,
-                error_type="SupervisorDenial",
-                message=f"Supervisor denied action '{card.proposed_action}' for event '{event_id}'. Reason: {payload.reason or 'None'}",
-            )
-        )
-        state.remediation_log.append(
-            RemediationAction(
-                event_id=event_id,
-                node_id=card.node_id,
-                action_taken=f"supervisor_denied::{card.proposed_action}",
-                success=False,
-                details={"reason": payload.reason, "checkpoint_id": payload.checkpoint_id},
-            )
-        )
-
-    # Persist updated state to checkpoint store
-    await save_checkpoint(session_id=session_id, state=state)
-
-    return DecisionResponse(
-        status="accepted",
+    coordinator = get_hitl_coordinator()
+    return await coordinator.handle_decision(
         session_id=session_id,
         event_id=event_id,
-        action=payload.action,
-        approval_state=state.approval_state.value,
-        checkpoint_id=payload.checkpoint_id,
+        payload=payload,
     )
 
 
