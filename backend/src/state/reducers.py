@@ -66,16 +66,21 @@ def reduce_last_write_wins(current_val: Optional[T], new_val: Optional[T]) -> Op
 
 def reduce_merge_by_key(
     current_dict: Mapping[K, V],
-    update_dict: Mapping[K, V],
+    update_dict: Mapping[K, Optional[V]],
 ) -> Dict[K, V]:
     """Enforces merge-by-key semantics.
 
     Preserves existing keys while non-destructively inserting or updating
-    keys present in update_dict.
+    keys present in update_dict. If an incoming key maps to None, the key is removed.
     """
     merged: Dict[K, V] = dict(current_dict)
-    merged.update(update_dict)
+    for k, v in update_dict.items():
+        if v is None:
+            merged.pop(k, None)
+        else:
+            merged[k] = v
     return merged
+
 
 
 def reduce_append_only(
@@ -167,9 +172,11 @@ def reduce_state(
     active_drift_events = current_state.active_drift_events
     if "active_drift_events" in delta:
         raw_events = delta["active_drift_events"]
-        validated_events: Dict[str, DriftEvent] = {}
+        validated_events: Dict[str, Optional[DriftEvent]] = {}
         for node_id, event_val in raw_events.items():
-            if isinstance(event_val, dict):
+            if event_val is None:
+                validated_events[node_id] = None
+            elif isinstance(event_val, dict):
                 validated_events[node_id] = DriftEvent.model_validate(event_val)
             elif isinstance(event_val, DriftEvent):
                 validated_events[node_id] = event_val
@@ -180,15 +187,18 @@ def reduce_state(
     evidence_bundle = current_state.evidence_bundle
     if "evidence_bundle" in delta:
         raw_evidence = delta["evidence_bundle"]
-        validated_evidence: Dict[str, EvidenceRefs] = {}
+        validated_evidence: Dict[str, Optional[EvidenceRefs]] = {}
         for event_id, ev_val in raw_evidence.items():
-            if isinstance(ev_val, dict):
+            if ev_val is None:
+                validated_evidence[event_id] = None
+            elif isinstance(ev_val, dict):
                 validated_evidence[event_id] = EvidenceRefs.model_validate(ev_val)
             elif isinstance(ev_val, EvidenceRefs):
                 validated_evidence[event_id] = ev_val
             else:
                 raise StateValidationError(f"Invalid EvidenceRefs type for event {event_id}: {type(ev_val)}")
         evidence_bundle = reduce_merge_by_key(current_state.evidence_bundle, validated_evidence)
+
 
     # 4. Append-only fields
     diagnosis_history = current_state.diagnosis_history

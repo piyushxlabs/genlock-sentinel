@@ -297,6 +297,8 @@ async def test_node4_autonomous_dispatch_preconditions_and_execution():
     assert res["success"] is True
     assert "remediation_log" in ctx.actions.state_delta
     assert ctx.actions.state_delta["session_status"] == SessionStatus.MONITORING.value
+    assert ctx.actions.state_delta["active_drift_events"] == {}
+    assert "render-07" not in session.state.get("active_drift_events", {})
 
     # Rejection case: low confidence
     low_conf_diagnosis = DiagnosisRecord(

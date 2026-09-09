@@ -142,6 +142,12 @@ def test_merge_by_key_active_drift_events() -> None:
     assert s3.active_drift_events["render-07"].status == "triaged"
     assert s3.active_drift_events["render-12"].status == "detected"
 
+    # Remove node 7 via None value (resolution of drift event)
+    s4 = reduce_state(s3, {"active_drift_events": {"render-07": None}})
+    assert "render-07" not in s4.active_drift_events
+    assert "render-12" in s4.active_drift_events
+    assert len(s4.active_drift_events) == 1
+
 
 def test_merge_by_key_evidence_bundle() -> None:
     """evidence_bundle merge-by-key ensures per-event evidence is never cross-overwritten."""
