@@ -530,3 +530,84 @@ async def test_api_decision_endpoint_e2e_deny(test_client: AsyncClient) -> None:
     assert saved_state.session_status == SessionStatus.MONITORING
     assert len(saved_state.error_logs) == 1
     assert "Director opted" in saved_state.error_logs[0].message
+
+
+@pytest.mark.asyncio
+async def test_hitl_coordinator_approve_proposed_action_none(test_client: AsyncClient) -> None:
+    """Verifies that approving a card where proposed_action is 'none' completes as an acknowledgement
+
+    without raising PostApprovalExecutionError, logs to remediation_log, and returns session to monitoring.
+    """
+    session_id = "sess-approve-none"
+    event_id = "evt-none-01"
+    card = _create_sample_card(event_id=event_id, proposed_action="none")
+
+    state = GenlockSentinelState(
+        session_id=session_id,
+        session_status=SessionStatus.AWAITING_APPROVAL,
+        approval_state=ApprovalStatus.PENDING,
+        pending_hitl_card=card,
+    )
+    await save_checkpoint(session_id=session_id, state=state)
+
+    async with test_client as client:
+        res = await client.post(
+            f"/sessions/{session_id}/events/{event_id}/decision",
+            json={
+                "action": "approve",
+                "checkpoint_id": card.card_id,
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "accepted"
+        assert data["action"] == "approve"
+        assert data["approval_state"] == "approved"
+        assert data["post_approval_result"]["action_taken"] == "supervisor_acknowledged"
+        assert data["post_approval_result"]["success"] is True
+
+    # Checkpoint verification
+    saved_state = await load_checkpoint(session_id=session_id)
+    assert saved_state is not None
+    assert saved_state.approval_state == ApprovalStatus.APPROVED
+    assert saved_state.session_status == SessionStatus.MONITORING
+    assert len(saved_state.remediation_log) >= 1
+    actions = [r.action_taken for r in saved_state.remediation_log]
+    assert "supervisor_acknowledged" in actions
+
+
+@pytest.mark.asyncio
+async def test_hitl_coordinator_approve_proposed_action_contains_none(test_client: AsyncClient) -> None:
+    """Verifies that approving a card where proposed_action contains 'none' (e.g. 'none (diagnostic pause)')
+
+    completes cleanly as supervisor_acknowledged without raising PostApprovalExecutionError.
+    """
+    session_id = "sess-approve-contains-none"
+    event_id = "evt-contains-none-02"
+    card = _create_sample_card(event_id=event_id, proposed_action="none (diagnostic pause)")
+
+    state = GenlockSentinelState(
+        session_id=session_id,
+        session_status=SessionStatus.AWAITING_APPROVAL,
+        approval_state=ApprovalStatus.PENDING,
+        pending_hitl_card=card,
+    )
+    await save_checkpoint(session_id=session_id, state=state)
+
+    async with test_client as client:
+        res = await client.post(
+            f"/sessions/{session_id}/events/{event_id}/decision",
+            json={
+                "action": "approve",
+                "checkpoint_id": card.card_id,
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "accepted"
+        assert data["post_approval_result"]["action_taken"] == "supervisor_acknowledged"
+
+    saved_state = await load_checkpoint(session_id=session_id)
+    assert saved_state is not None
+    assert saved_state.session_status == SessionStatus.MONITORING
+

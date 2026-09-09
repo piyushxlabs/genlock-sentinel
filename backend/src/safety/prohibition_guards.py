@@ -124,22 +124,24 @@ def validate_tool_dispatch_preconditions(
             )
 
         latest_diag = state.diagnosis_history[-1]
+        diag_cat = getattr(latest_diag, "category", None) or (latest_diag.get("category") if isinstance(latest_diag, dict) else None)
+        diag_conf = getattr(latest_diag, "confidence", 0.0) if hasattr(latest_diag, "confidence") else (latest_diag.get("confidence", 0.0) if isinstance(latest_diag, dict) else 0.0)
 
-        if latest_diag.category == "ambiguous":
+        if diag_cat == "ambiguous":
             raise ToolExecutionError(
                 f"Cannot execute autonomous tool '{tool_name}': latest diagnosis is ambiguous."
             )
 
-        if latest_diag.category != required_category:
+        if diag_cat != required_category:
             raise ToolExecutionError(
                 f"Diagnosis category mismatch: tool '{tool_name}' requires category '{required_category}', "
-                f"found '{latest_diag.category}'."
+                f"found '{diag_cat}'."
             )
 
-        if latest_diag.confidence < state.config.confidence_floor:
+        if diag_conf < state.config.confidence_floor:
             raise ToolExecutionError(
                 f"Confidence floor violation: tool '{tool_name}' requires confidence >= "
-                f"{state.config.confidence_floor}, found {latest_diag.confidence}."
+                f"{state.config.confidence_floor}, found {diag_conf}."
             )
 
 

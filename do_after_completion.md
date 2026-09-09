@@ -1,165 +1,147 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 21 COMPLETION CHECKLIST
-# Hollywood ICVFX Mission Control Visual Elevation
+# Production Readiness Check & Final System Audit
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏰ BEFORE running the next prompt — verify these first:
+⏰ BEFORE running the next prompt — do these first:
 
-[ ] Frontend dev server is still running
+[ ] Verify backend environment has the test suite ready
+    ```powershell
+    cd "A:\Projects\GENLOCK SENTINEL\backend"
+    uv run pytest tests/evals/test_production_readiness.py -v
     ```
-    # Should already be running from previous session:
-    # npm run dev (in A:\Projects\GENLOCK SENTINEL\frontend)
-    ```
-    Expected: Server on http://localhost:3000/ (already confirmed running)
+    Expected: 14 passed in ~1-2 seconds with 100% success rate
 
-[ ] Hard-refresh the browser (Ctrl+Shift+R) to pick up hot-reloaded changes
-    Open: http://localhost:3000/
-    Expected: New dark carbon cockpit UI loads immediately
+[ ] Verify full backend test suite passes across all 209 tests
+    ```powershell
+    cd "A:\Projects\GENLOCK SENTINEL\backend"
+    uv run pytest tests/ -q
+    ```
+    Expected: `209 passed, 6 warnings in ~15s`
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏰ AFTER code was generated — verify these now:
+⏰ AFTER code was generated — do these now:
 
-[ ] Build passes with zero errors
+[ ] Verify production readiness evaluations specifically:
+    ```powershell
+    cd "A:\Projects\GENLOCK SENTINEL\backend"
+    uv run pytest tests/evals/test_production_readiness.py -k "test_simulation" -v
     ```
+    Expected: All 6 Section 9.5 failure simulations pass:
+    - `test_simulation_1_loki_retry_exhaustion_telemetry_gap`
+    - `test_simulation_2_emergency_stop_mid_diagnostic_cycle`
+    - `test_simulation_3_malformed_drift_event_rejected`
+    - `test_simulation_4_ast_import_boundary_check_prohibited_tools`
+    - `test_simulation_5_unattended_pending_hitl_card_safety`
+    - `test_simulation_6_tool_malformed_json_output_rejected`
+    If wrong: Ensure `GENLOCK_SENTINEL_FORCE_MOCK=true` is set.
+
+[ ] Verify Section 9.6 non-negotiable verification requirements:
+    ```powershell
+    cd "A:\Projects\GENLOCK SENTINEL\backend"
+    uv run pytest tests/evals/test_production_readiness.py -k "test_non_negotiable" -v
+    ```
+    Expected: All 5 non-negotiable tests pass (single-pass loop caps, 5 structural prohibitions, emergency stop invariant, 10 reducer invariants, HITL approve/deny paths).
+
+[ ] Verify Section 2 production configuration and credentials audit:
+    ```powershell
+    cd "A:\Projects\GENLOCK SENTINEL\backend"
+    uv run pytest tests/evals/test_production_readiness.py -k "test_audit" -v
+    ```
+    Expected: All 3 audit tests pass (zero hardcoded secrets in `backend/src`, complete `.env.example`, verified `postgresql+asyncpg` configuration).
+
+[ ] Verify frontend production bundle builds cleanly:
+    ```powershell
     cd "A:\Projects\GENLOCK SENTINEL\frontend"
     pnpm build
     ```
-    Expected: `✓ built in ~3s` — zero TypeScript errors
-    ✅ ALREADY VERIFIED: 1868 modules transformed, 2.92s, exit code 0
-
-[ ] Visual inspection at http://localhost:3000/ — check each area:
-
-  HEADER:
-  [ ] "GENLOCK SENTINEL" text shows a gradient (white → light cyan)
-  [ ] Amber nuclear badge shows live ticking: $X.XX.XX format changing every frame
-  [ ] Subtext "CALCULATED AT $1,800/MIN PRODUCTION LOSS" visible below amount
-  [ ] Emergency Stop button shows diagonal hazard-stripe pattern
-  [ ] Session clock HH:MM:SS is counting up
-  [ ] Header has a 2px cyan top border accent
-
-  STEP TRACKER (7-Node Pipeline):
-  [ ] Nodes are in a horizontal row connected by SVG arrows
-  [ ] Node 1 (Stream Watch) shows cyan halo-pulse ring (active)
-  [ ] Connector lines show animated moving-dash cyan arrows
-  [ ] Branch legend is visible at the bottom
-
-  CHART (Frame-Sync Telemetry):
-  [ ] A vertical beam/line is slowly sweeping left→right→left continuously
-  [ ] The sweep is visible even with no data loaded (idle state)
-  [ ] Threshold line has a red glowing aura/blur above it
-  [ ] Hazard hatch (diagonal stripe) pattern fills area above 150µs
-  [ ] 16-node Render-01 to Render-16 LED grid is visible below chart
-  [ ] Each node shows a pulsating green LED ping dot
-  [ ] "ALL NODES FRAME-LOCKED · 0 DRIFT DETECTED" status bar visible
-
-  EVIDENCE PANEL (empty state):
-  [ ] Rotating radar sweep SVG circle is animating
-  [ ] "LOKI / TEMPO MCP BUS ACTIVE" label blinks gently
-  [ ] Grafana MCP / Loki / Tempo status rows show green CONNECTED/ARMED labels
-
-  DIAGNOSIS PANEL (empty state):
-  [ ] Brain-wave EKG SVG with scanning dot is visible
-  [ ] "NODE 3 ARMED · AWAITING EVIDENCE BUNDLE" label blinks
-  [ ] Model config rows visible: Gemini 3.1 Pro, temp 0.0, etc.
-
-  BACKGROUND:
-  [ ] Page background is deep carbon (#070A11) — not pure black, not grey
-  [ ] Subtle cyan radial gradient visible at the top center
-  [ ] 32px grid lines faintly visible in the background
+    Expected: `✓ built in ~3s` with 0 errors.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `frontend/src/index.css` — complete carbon cockpit design system:
-    15+ new keyframes (halo-pulse, led-ping, radar-sweep, burn-micro, standby-blink),
-    32px CSS grid overlay on #root::before, glassmorphism with backdrop-blur(20px),
-    nuclear burn badge class, aircraft emergency stop with hazard stripe
-
-[ ] File: `frontend/src/components/StepTracker.tsx` — animated SVG workflow bus:
-    moving-dash connector lines energize left-to-right as steps complete,
-    cyan halo-pulse ring on active nodes, emerald ring on completed,
-    branch legend, RAF-driven tick animation
-
-[ ] File: `frontend/src/components/SyncOffsetChart.tsx` — broadcast-grade telemetry:
-    neon gradient area fill (cyanGlow linearGradient), red aura on threshold line,
-    SVG hazard hatch pattern above breach perimeter, live RAF radar sweep bounce,
-    16-node Render-01→Render-16 LED matrix with staggered emerald ping animations
-
-[ ] File: `frontend/src/components/EvidenceCard.tsx` — cybernetic MCP bus standby:
-    animated SVG radar circle sweep, Grafana/Loki/Tempo status rows,
-    standby-blink label
-
-[ ] File: `frontend/src/components/DiagnosisBadge.tsx` — armed standby sensor:
-    brain-wave SVG with scanning dot, model config panel, standby-blink label
-
-[ ] File: `frontend/src/App.tsx` — nuclear header elevation:
-    gradient logo, live ms burn ticker, production loss subtext,
-    session clock, Radio SSE indicator, aircraft emergency stop
+[ ] File: `backend/tests/evals/test_production_readiness.py` — Authoritative production readiness evaluation suite verifying Section 9.5 failure simulations, Section 9.6 non-negotiables, and Section 2 production configuration & credential audits.
+[ ] File: `backend/src/agents/post_approval_handling.py` — Supervisor acknowledgment handling for diagnostic pause cards where `proposed_action` is `'none'`, returning cleanly without actuator dispatch.
+[ ] File: `backend/src/utils/errors.py` — Added `PostApprovalExecutionError(ToolExecutionError)` to custom `AgentError` hierarchy.
+[ ] File: `backend/src/ui/hitl_resumption.py` — Terminal session status verification (`STOPPED`, `FAILED`) rejecting resumption on stopped sessions with HTTP 400.
+[ ] File: `backend/src/safety/prohibition_guards.py` — Enhanced category and confidence extraction in `validate_tool_dispatch_preconditions` to handle serialized dictionary state cleanly.
+[ ] File: `backend/tests/conftest.py` — Global autouse fixture defaulting `GENLOCK_SENTINEL_FORCE_MOCK=true` for deterministic, sub-16s test suite execution.
+[ ] File: `backend/tests/unit/test_hitl_resumption.py` — Added unit tests verifying supervisor approval when `proposed_action="none"` and `proposed_action="none (diagnostic pause)"`.
+[ ] Feature: Section 9.5 Failure Simulation 1 — Loki 3-retry exhaustion sets evidence-gap flag `logs_available=False` with zero hallucinated log lines.
+[ ] Feature: Section 9.5 Failure Simulation 2 — Emergency Stop mid-diagnostic cycle cleanly halts session and preserves checkpoint as `SessionStatus.STOPPED`.
+[ ] Feature: Section 9.5 Failure Simulation 3 — Malformed drift events (missing `frame_id` or extra unauthorized fields) strictly rejected by Pydantic V2 schema.
+[ ] Feature: Section 9.5 Failure Simulation 4 — Static AST import-boundary audit guarantees cognitive nodes never import Tools 7–9.
+[ ] Feature: Section 9.5 Failure Simulation 5 — Unattended pending HITL cards remain safely paused in `AWAITING_APPROVAL` with zero autonomous default actuation.
+[ ] Feature: Section 9.5 Failure Simulation 6 — Malformed tool JSON outputs rejected before entering state or evidence bundles.
+[ ] Feature: Section 9.6 Non-Negotiables — Verified 1-pass cycle cap, 5 structural prohibitions, emergency stop invariants, 10 reducer invariants, and HITL approve/deny paths.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Test 1 — Build passes:
+Test 1 — Files Exist:
+```powershell
+Get-Item "A:\Projects\GENLOCK SENTINEL\backend\tests\evals\test_production_readiness.py"
 ```
+✅ Expected: File exists (~23 KB, 599 lines)
+❌ If missing: Check repository status with `git status`
+
+Test 2 — Environment / Dependencies:
+```powershell
+cd "A:\Projects\GENLOCK SENTINEL\backend"
+uv run python --version
+```
+✅ Expected: Python 3.11.x
+❌ If errors: Run `uv sync` in `backend/`
+
+Test 3 — Test Suite Execution:
+```powershell
+cd "A:\Projects\GENLOCK SENTINEL\backend"
+uv run pytest tests/ -q
+```
+✅ Expected: `209 passed, 6 warnings in ~15s`
+❌ If errors: Inspect pytest error trace; verify `.env` parameters
+
+Test 4 — Functional Check (End-to-End Live System):
+```powershell
+# In terminal 1 (backend):
+cd "A:\Projects\GENLOCK SENTINEL\backend"
+uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
+
+# In terminal 2 (frontend):
 cd "A:\Projects\GENLOCK SENTINEL\frontend"
-pnpm build
-```
-✅ Expected: `✓ built in ~3s` — zero TS errors
-❌ If errors: Check for any new unused variables — prefix with underscore
+pnpm run dev
 
-Test 2 — Files exist:
-```
-dir "A:\Projects\GENLOCK SENTINEL\frontend\src\components"
-dir "A:\Projects\GENLOCK SENTINEL\frontend\src"
-```
-✅ Expected: StepTracker.tsx, SyncOffsetChart.tsx, EvidenceCard.tsx,
-   DiagnosisBadge.tsx, App.tsx, index.css all present
-
-Test 3 — Live console at http://localhost:3000/:
-- Hard refresh (Ctrl+Shift+R)
-✅ Expected: Carbon cockpit UI loads, animations visible immediately
-❌ If blank page: Check browser console for errors
-
-Test 4 — Drift injection still works:
-```
+# In terminal 3 (simulator):
 cd "A:\Projects\GENLOCK SENTINEL\backend"
 uv run python scripts/simulate_drift.py --scenario complex
 ```
-✅ Expected: Chart shows spike, step tracker animates through all 7 nodes,
-   evidence panel fills with real data, diagnosis standby is replaced,
-   HITL modal appears
-❌ If backend not running: `uv run uvicorn src.main:app --port 8000`
+✅ Expected: Operations console at http://localhost:3000/ displays live telemetry spike, Gemini 3.1 Pro streaming reasoning tokens, energized Step Tracker flow, and presents the blocking HITL Approval Modal for supervisor sign-off.
+❌ If wrong: Check backend logs at port 8000 and browser DevTools console.
 
-Test 5 — Interface boundary compliance:
-[ ] No chat box or free-text input anywhere on the page
-[ ] No manual actuator controls visible in the UI
-[ ] No raw credentials or internal session data visible
-[ ] Approve/Deny/Stop are the only action controls (modal only when pending)
-
-Test 6 — Security:
-[ ] .env is in .gitignore
-    ```
-    cat "A:\Projects\GENLOCK SENTINEL\.gitignore" | findstr ".env"
-    ```
-    ✅ Expected: .env appears in output
+Test 5 — Security Check:
+[ ] Verify .env is in .gitignore:
+```powershell
+cd "A:\Projects\GENLOCK SENTINEL"
+git check-ignore -v backend/.env
+```
+✅ Expected: `.gitignore:3:*.env	backend/.env`
+❌ If missing: Add `*.env` and `.env` to `.gitignore` immediately
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 GIT COMMIT
-(Run ONLY after all above checks pass)
+(Run this ONLY after all above checks pass)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-```
+```powershell
 git add .
-git commit -m "Step 21: Hollywood ICVFX Mission Control Visual Elevation — Carbon cockpit, animated SVG workflow bus, neon chart, radar sweep, LED matrix, nuclear burn badge"
+git commit -m "Step 21: Production Readiness Check — Passed 6 failure simulations, 5 non-negotiables, and credential audit (209/209 tests passing)"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Production Readiness until:
-[ ] All visual checks above show ✅
-[ ] pnpm build shows zero errors
-[ ] Drift injection demo still works end-to-end
+✋ DO NOT proceed to Step [NUMBER+1] until:
+[ ] All tests above show ✅
 [ ] Git commit is done
-[ ] You have read this file fully
+[ ] You have read do_after_completion.md fully
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

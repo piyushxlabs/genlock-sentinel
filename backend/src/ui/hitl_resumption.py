@@ -236,6 +236,13 @@ class HITLResumptionCoordinator:
                 detail=f"Session '{session_id}' not found.",
             )
 
+        # 2b. Session terminal status check (cannot resume after Stop)
+        if state.session_status in (SessionStatus.STOPPED, SessionStatus.FAILED):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot process decision: session '{session_id}' is in terminal '{state.session_status.value}' status.",
+            )
+
         # 3. Pending HITL card presence check
         if state.pending_hitl_card is None:
             raise HTTPException(

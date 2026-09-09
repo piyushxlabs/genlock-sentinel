@@ -44,3 +44,9 @@ class SafetyViolationError(AgentError):
 class CircuitBreakerTrippedError(AgentError):
     """Raised when node failure counts exceed threshold in a rolling window."""
     pass
+
+
+class PostApprovalExecutionError(ToolExecutionError):
+    """Raised when post-approval dispatch or validation fails."""
+    pass
+

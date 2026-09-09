@@ -745,3 +745,48 @@
 - `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed, built in 2.92s
 - Pass
 ---
+
+---
+## Step 21 — Production Readiness Check
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Implemented the authoritative Production Readiness Check and Final Audit Suite in `backend/tests/evals/test_production_readiness.py` covering all 6 Section 9.5 failure simulations, all 5 Section 9.6 non-negotiable verification requirements, and all 3 Section 2 production configuration and credential leak audits.
+- Executed Simulation 1: `query_loki_logs` 3-retry exhaustion → sets evidence-gap flag `logs_available=False`, records anomaly, proceeds to ambiguous routing with zero hallucinated log lines.
+- Executed Simulation 2: Emergency Stop mid-diagnostic cycle → enforces clean halt and checkpoint preservation as `SessionStatus.STOPPED`, blocking retroactive tool execution.
+- Executed Simulation 3: Malformed drift event arrives (missing `frame_id` or extra unauthorized fields) → strict Pydantic V2 rejection (`strict=True, extra="forbid"`), preventing corrupted state.
+- Executed Simulation 4: AST architectural import-boundary analysis across the codebase → verifies cognitive reasoning nodes (`evidence_triage.py`, `root_cause_correlation.py`, `autonomous_dispatch.py`, `hitl_card_generation.py`) never import Tools 7–9 (`halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover`); only `post_approval_handling.py` imports and binds them.
+- Executed Simulation 5: Unattended pending HITL card → remains safely paused in `AWAITING_APPROVAL`, zero autonomous default actions fire, and approval gate remains indefinitely suspended until explicit supervisor intervention.
+- Executed Simulation 6: Malformed tool JSON output → rejected by Pydantic V2 schema validation before reaching `evidence_bundle` or `diagnosis_history`.
+- Verified all 5 Section 9.6 Non-Negotiables:
+  1. No infinite loops: exactly 1 diagnostic/remediation pass per `event_id` to terminal state, in-flight re-entry prohibited.
+  2. All 5 structural prohibitions enforced: unauthorized HITL actions blocked, prompt injection sanitized, sensitive credentials screened, ambiguous autonomous execution blocked, out-of-scope non-capabilities refused.
+  3. Emergency stop functional while HITL card is open; subsequent resumption attempts on stopped sessions rejected with HTTP 400.
+  4. Reducer invariants strictly verified across all 10 state fields (`immutable-after-init`, `merge-by-key`, `append-only`, `last-write-wins`).
+  5. Resumption path verified for Approve and Deny with zero edit path by design.
+- Audited production readiness: verified `.env.example` completeness against Section 2 specifications, verified Cloud SQL PostgreSQL `postgresql+asyncpg` configuration, and scanned all Python source files in `src/` confirming zero hardcoded credentials or API secrets.
+- Handled supervisor approval for diagnostic pauses where `proposed_action` is `'none'` or contains `'none'` in `backend/src/agents/post_approval_handling.py`, treating it as a supervisor acknowledgement, logging to `remediation_log`, resetting `session_status` to `MONITORING`, and returning cleanly without attempting actuator tool execution.
+- Added `PostApprovalExecutionError(ToolExecutionError)` to the custom `AgentError` hierarchy in `backend/src/utils/errors.py`.
+- Added unit test cases for `proposed_action="none"` in `backend/tests/unit/test_hitl_resumption.py`.
+- Verified entire backend test suite: 209/209 tests passing (100%).
+
+**Files Created:**
+- `backend/tests/evals/test_production_readiness.py` — Authoritative production readiness evaluation suite verifying Section 9.5 failure simulations, Section 9.6 non-negotiable requirements, and Section 2 production configuration & credential audits.
+
+**Files Modified:**
+- `backend/src/agents/post_approval_handling.py` — Handled supervisor approvals where `proposed_action` is `'none'` or contains `'none'` as clean acknowledgments without actuator dispatch, logging to `remediation_log` and returning status to `MONITORING`.
+- `backend/src/utils/errors.py` — Added `PostApprovalExecutionError(ToolExecutionError)` to the custom `AgentError` hierarchy.
+- `backend/src/ui/hitl_resumption.py` — Added terminal session status guard (`STOPPED`, `FAILED`) rejecting decision resumption on stopped sessions with HTTP 400.
+- `backend/src/safety/prohibition_guards.py` — Updated `validate_tool_dispatch_preconditions` to robustly read category and confidence from both `DiagnosisRecord` objects and serialized dictionary state.
+- `backend/tests/unit/test_hitl_resumption.py` — Added unit tests verifying supervisor approval when `proposed_action="none"` and `proposed_action="none (diagnostic pause)"`.
+- `backend/tests/conftest.py` — Added global autouse fixture defaulting `GENLOCK_SENTINEL_FORCE_MOCK=true` for deterministic, sub-16s test suite execution.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/evals/test_production_readiness.py -v`: 14/14 passed (100%).
+- `uv run pytest tests/ -q`: 209 passed, 6 warnings in 15.34s across all unit, eval, and e2e suites (100%).
+- Pass
+---

@@ -165,3 +165,24 @@ Step 4 — No deviations from spec.
 **Reason:** Pure CSS animations run between fixed `0%` and `100%` keyframes; reversing direction mid-animation requires JavaScript state. The RAF approach updates a `sweepX` percentage (0–100%) that maps to absolute SVG pixels at render time, giving a perfectly bounded sweep that never overflows the chart area.
 **Impact:** Adds one `requestAnimationFrame` loop per mounted `SyncOffsetChart` instance. This is deliberate — the chart is mounted once per console session and the loop is cancelled on unmount via the `useEffect` cleanup return.
 ---
+
+---
+## Step 21 — AST Import Boundary Audit for Actuator Isolation
+**Decision:** Implemented Simulation 4 in `backend/tests/evals/test_production_readiness.py` using Python's standard `ast` module to parse abstract syntax trees of all cognitive agent modules (`evidence_triage.py`, `root_cause_correlation.py`, `autonomous_dispatch.py`, `hitl_card_generation.py`), verifying that Tools 7–9 (`halt_live_take`, `fallback_to_greenscreen`, `execute_threshold_exceeding_failover`) are never imported, bound, or referenced outside `post_approval_handling.py`.
+**Reason:** Fulfills `node-tool-access-matrix-restrictions.md` and `AGENT_MASTER_PLAN.md` Section 9.5 Simulation 4. Static AST inspection guarantees zero compile-time or runtime possibility of cognitive LLM nodes holding direct bindings to high-cost on-set actuators.
+**Impact:** Enforces hard architectural isolation between reasoning and high-consequence actuation, preventing accidental import regressions in CI/CD.
+---
+
+---
+## Step 21 — Supervisor Acknowledgment for Diagnostic Pauses (Action = "none")
+**Decision:** In `backend/src/agents/post_approval_handling.py`, when a supervisor approves a HITL card where `proposed_action` is `"none"` or contains `"none"` (e.g. `"none (diagnostic pause)"`), the handler records the action as `"supervisor_acknowledged"`, logs it to `remediation_log`, resets `session_status` to `MONITORING`, and returns cleanly without raising `PostApprovalExecutionError`.
+**Reason:** When Root-Cause Correlation diagnoses an ambiguous drift or an anomaly requiring manual investigation, it generates a HITL card with `proposed_action="none"`. When the supervisor reviews the evidence and signs off, the system must acknowledge the supervisor's review, resume background monitoring, and avoid attempting to dispatch a non-existent cluster actuator tool.
+**Impact:** Enables clean supervisor review cycles for purely observational or ambiguous anomalies without throwing unhandled exceptions.
+---
+
+---
+## Step 21 — Terminal Status Resumption Rejection (Emergency Stop Invariant)
+**Decision:** In `backend/src/ui/hitl_resumption.py`, `verify_checkpoint` checks `state.session_status` and raises HTTP 400 Bad Request if the session is in `SessionStatus.STOPPED` or `SessionStatus.FAILED`.
+**Reason:** Fulfills `AGENT_MASTER_PLAN.md` Section 8, Section 9.5 Simulation 2, and Section 9.6 Non-Negotiable 3. Once an on-set emergency stop is triggered, the cluster must be considered in a halted/safe state; resuming pending approval decisions on stopped sessions is an invariant violation.
+**Impact:** Guarantees that emergency stop is irreversible from the standard HITL decision modal, requiring a fresh session initialization to resume cluster monitoring.
+---
