@@ -697,7 +697,6 @@
 
 **Files Created:**
 - `backend/tests/unit/test_drift_injection.py` — Comprehensive unit test suite for drift event ingestion, state mutations, and AG-UI SSE event streaming.
-
 **Files Modified:**
 - `backend/src/main.py` — Added `InjectDriftRequest`, `InjectDriftResponse`, `_execute_drift_reasoning`, and `POST /sessions/{session_id}/inject-drift` endpoint.
 - `backend/src/agents/reasoning_loop.py` — Instrumented `run_reasoning_loop` with `AGUIEventBridge` real-time broadcasting and checkpoint persistence.
@@ -716,3 +715,33 @@
 - Pass
 ---
 
+## Step 21 — Hollywood ICVFX Mission Control Visual Elevation (Frontend)
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Rewrote `frontend/src/index.css` with carbon cockpit aesthetic (`#070A11`), radial gradient haze, 32px CSS grid overlay via `#root::before`, upgraded glassmorphism cards with `backdrop-blur(20px)`, `inset` rim-lighting, new keyframes: `halo-pulse`, `halo-pulse-emerald`, `led-ping`, `flow-dash`, `radar-sweep`, `burn-micro`, `standby-blink`, and aircraft-grade emergency stop button styles with hazard stripe pseudo-element
+- Rewrote `StepTracker.tsx` as an animated SVG workflow bus: energized moving-dash connector lines with arrowheads light up cyan as steps complete, active nodes get a `halo-pulse` cyan ring, completed nodes get `halo-pulse-emerald`, muted branch nodes drop to 30% opacity, branch legend added, `useTick` RAF animation for smooth dash flow
+- Rewrote `SyncOffsetChart.tsx`: neon gradient area fill under telemetry curves via `<linearGradient id="cyanGlow">`, threshold line upgraded with red aura glow (`rgba(244,63,94,0.12)` blur band) + SVG `<pattern>` hazard hatch above breach perimeter, live `requestAnimationFrame` radar sweep beam bouncing across chart at all times, 16-node Render-01 to Render-16 LED matrix with staggered emerald ping animations replaces "Awaiting metric samples..." placeholder
+- Upgraded `EvidenceCard.tsx` empty state with cybernetic MCP bus standby panel: animated SVG radar sweep circle, Grafana MCP / Loki LogQL / Tempo gRPC status rows, standby-blink "LOKI/TEMPO MCP BUS ACTIVE • 0 LATENCY DETECTED" label
+- Upgraded `DiagnosisBadge.tsx` empty state with armed standby sensor: brain-wave SVG animation, model config panel (Gemini 3.1 Pro, temp 0.0, schema), standby-blink "NODE 3 ARMED" label
+- Upgraded `App.tsx` header: gradient text GENLOCK SENTINEL logo, nuclear amber `burn-badge` with live millisecond micro-ticker (dollars.cents.ms), "CALCULATED AT $1,800/MIN PRODUCTION LOSS" subtext, session clock `HH:MM:SS` display, Radio icon SSE indicator with glow dot, aircraft-grade emergency stop with hazard-stripe `::before` pseudo-element
+
+**Files Created:**
+- None
+
+**Files Modified:**
+- `frontend/src/index.css` — complete design system rewrite with 15+ new CSS tokens and keyframes
+- `frontend/src/components/StepTracker.tsx` — animated SVG workflow bus
+- `frontend/src/components/SyncOffsetChart.tsx` — neon chart with radar sweep and LED matrix
+- `frontend/src/components/EvidenceCard.tsx` — cybernetic standby panel
+- `frontend/src/components/DiagnosisBadge.tsx` — armed standby sensor
+- `frontend/src/App.tsx` — nuclear burn badge + aircraft emergency stop
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed, built in 2.92s
+- Pass
+---

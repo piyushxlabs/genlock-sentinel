@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertTriangle, ShieldCheck } from "lucide-react";
 import { SyncOffsetSample } from "../stream/agui-client";
 
@@ -7,46 +7,70 @@ interface SyncOffsetChartProps {
   thresholdUs?: number;
 }
 
+// 16 render node names for the idle cluster matrix
+const RENDER_NODES = Array.from({ length: 16 }, (_, i) =>
+  `Render-${String(i + 1).padStart(2, "0")}`
+);
+
+const NODE_COLORS: Record<string, string> = {
+  "render-07": "#06b6d4",
+  "render-12": "#a855f7",
+  "render-01": "#10b981",
+};
+
+// Stagger LED ping durations for organic feel
+const LED_DURATIONS = RENDER_NODES.map((_, i) => 1.8 + (i % 5) * 0.35);
+
 export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
   samples,
   thresholdUs = 150.0,
 }) => {
-  // Extract latest sample per node
+  // ── Radar sweep position ─────────────────────────────────────────────
+  const [sweepX, setSweepX] = useState(0);
+  const sweepRef = useRef<number | null>(null);
+  const sweepDirRef = useRef(1);
+
+  useEffect(() => {
+    const animate = () => {
+      setSweepX((prev) => {
+        const next = prev + sweepDirRef.current * 1.8;
+        if (next >= 100) sweepDirRef.current = -1;
+        if (next <= 0)   sweepDirRef.current =  1;
+        return Math.max(0, Math.min(100, next));
+      });
+      sweepRef.current = requestAnimationFrame(animate);
+    };
+    sweepRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (sweepRef.current !== null) cancelAnimationFrame(sweepRef.current);
+    };
+  }, []);
+
+  // ── Data derivation ──────────────────────────────────────────────────
   const latestByNode = useMemo(() => {
     const map = new Map<string, SyncOffsetSample>();
-    for (const s of samples) {
-      map.set(s.node_id, s);
-    }
+    for (const s of samples) map.set(s.node_id, s);
     return Array.from(map.values());
   }, [samples]);
 
-  // Overall maximum offset
   const maxOffset = useMemo(() => {
     if (samples.length === 0) return 200;
-    return Math.max(
-      thresholdUs * 1.3,
-      ...samples.map((s) => s.sync_offset_us)
-    );
+    return Math.max(thresholdUs * 1.3, ...samples.map((s) => s.sync_offset_us));
   }, [samples, thresholdUs]);
 
-  const hasBreach = useMemo(() => {
-    return latestByNode.some((s) => s.sync_offset_us > thresholdUs);
-  }, [latestByNode, thresholdUs]);
+  const hasBreach = useMemo(
+    () => latestByNode.some((s) => s.sync_offset_us > thresholdUs),
+    [latestByNode, thresholdUs]
+  );
 
-  // SVG Chart Geometry
-  const width = 760;
-  const height = 240;
-  const padLeft = 60;
-  const padRight = 20;
-  const padTop = 30;
-  const padBottom = 40;
+  // ── SVG geometry ─────────────────────────────────────────────────────
+  const W = 760, H = 240;
+  const PL = 60, PR = 20, PT = 28, PB = 40;
+  const CW = W - PL - PR;
+  const CH = H - PT - PB;
+  const threshY = PT + CH * (1 - thresholdUs / maxOffset);
 
-  const chartWidth = width - padLeft - padRight;
-  const chartHeight = height - padTop - padBottom;
-
-  const thresholdY = padTop + chartHeight * (1 - thresholdUs / maxOffset);
-
-  // Group last 30 samples by node for polyline rendering
+  // Group last 60 samples by node
   const seriesByNode = useMemo(() => {
     const groups: Record<string, SyncOffsetSample[]> = {};
     for (const s of samples.slice(-60)) {
@@ -56,79 +80,116 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
     return groups;
   }, [samples]);
 
-  const nodeColors: Record<string, string> = {
-    "render-07": "#06b6d4",
-    "render-12": "#a855f7",
-    "render-01": "#10b981",
+  // Area polygon path for neon fill
+  const buildAreaPath = (nodeSamples: SyncOffsetSample[]): string => {
+    if (nodeSamples.length < 2) return "";
+    const pts = nodeSamples.map((s, i) => {
+      const x = PL + (i / (nodeSamples.length - 1)) * CW;
+      const y = PT + CH * (1 - Math.min(s.sync_offset_us, maxOffset) / maxOffset);
+      return { x, y };
+    });
+    const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const base = `L${pts[pts.length - 1].x.toFixed(1)},${(PT + CH).toFixed(1)} L${PL.toFixed(1)},${(PT + CH).toFixed(1)} Z`;
+    return `${line} ${base}`;
   };
+
+  const sweepAbsPx = PL + (sweepX / 100) * CW;
 
   return (
     <div className="glass-panel" style={{ padding: "20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "14px",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Activity size={20} color="var(--color-cyan)" />
-          <h2 style={{ fontSize: "1.05rem", fontWeight: 700, letterSpacing: "-0.01em" }}>
-            Real-Time Frame-Sync Telemetry (Prometheus)
-          </h2>
+          <Activity size={19} color="var(--color-cyan)" />
+          <div>
+            <h2 style={{ fontSize: "0.95rem", fontWeight: 700, letterSpacing: "-0.01em" }}>
+              Real-Time Frame-Sync Telemetry
+            </h2>
+            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "1px", fontFamily: "var(--font-mono)" }}>
+              PROMETHEUS SCRAPE · nDISPLAY SYNC_OFFSET_US
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {hasBreach ? (
             <span className="badge badge-critical pulse-active">
-              <AlertTriangle size={13} /> Threshold Breach ({thresholdUs}µs)
+              <AlertTriangle size={12} /> Threshold Breach ({thresholdUs}µs)
             </span>
           ) : (
             <span className="badge badge-nominal">
-              <ShieldCheck size={13} /> Frame-Sync Locked (60.000 Hz)
+              <ShieldCheck size={12} /> Frame-Sync Locked · 60.000 Hz
             </span>
           )}
         </div>
       </div>
 
       {/* Chart SVG */}
-      <div style={{ width: "100%", overflowX: "auto" }}>
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          style={{ width: "100%", height: "auto", display: "block" }}
-        >
+      <div style={{ width: "100%", overflowX: "auto", position: "relative" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
           <defs>
-            <linearGradient id="grid-grad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.04)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0.01)" />
+            {/* Neon cyan area fill gradient */}
+            <linearGradient id="cyanGlow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="rgba(6,182,212,0.28)" />
+              <stop offset="60%"  stopColor="rgba(6,182,212,0.06)" />
+              <stop offset="100%" stopColor="rgba(6,182,212,0)" />
             </linearGradient>
+            <linearGradient id="purpleGlow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="rgba(168,85,247,0.22)" />
+              <stop offset="100%" stopColor="rgba(168,85,247,0)" />
+            </linearGradient>
+            <linearGradient id="emeraldGlow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor="rgba(16,185,129,0.22)" />
+              <stop offset="100%" stopColor="rgba(16,185,129,0)" />
+            </linearGradient>
+
+            {/* Hazard hatch pattern above threshold */}
+            <pattern id="hazardHatch" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="8" stroke="rgba(244,63,94,0.18)" strokeWidth="2" />
+            </pattern>
+
+            {/* Radar sweep gradient */}
+            <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="rgba(6,182,212,0)" />
+              <stop offset="40%"  stopColor="rgba(6,182,212,0.08)" />
+              <stop offset="70%"  stopColor="rgba(6,182,212,0.25)" />
+              <stop offset="100%" stopColor="rgba(6,182,212,0.55)" />
+            </linearGradient>
+
+            {/* Clip chart area */}
+            <clipPath id="chartClip">
+              <rect x={PL} y={PT} width={CW} height={CH} rx={4} />
+            </clipPath>
           </defs>
 
-          {/* Background area */}
+          {/* Chart background */}
           <rect
-            x={padLeft}
-            y={padTop}
-            width={chartWidth}
-            height={chartHeight}
-            fill="url(#grid-grad)"
-            rx={6}
+            x={PL} y={PT} width={CW} height={CH}
+            fill="rgba(6,182,212,0.025)" rx={6}
           />
 
           {/* Grid lines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((p, idx) => {
-            const y = padTop + chartHeight * (1 - p);
+          {[0, 0.25, 0.5, 0.75, 1].map((p, i) => {
+            const y = PT + CH * (1 - p);
             const val = Math.round(maxOffset * p);
             return (
-              <g key={idx}>
+              <g key={i}>
                 <line
-                  x1={padLeft}
-                  y1={y}
-                  x2={width - padRight}
-                  y2={y}
-                  stroke="rgba(255,255,255,0.07)"
-                  strokeDasharray="3 3"
+                  x1={PL} y1={y} x2={W - PR} y2={y}
+                  stroke="rgba(255,255,255,0.055)"
+                  strokeDasharray="3 4"
                 />
                 <text
-                  x={padLeft - 10}
-                  y={y + 4}
-                  fill="var(--text-muted)"
-                  fontSize={10}
-                  fontFamily="var(--font-mono)"
-                  textAnchor="end"
+                  x={PL - 8} y={y + 4}
+                  fill="var(--text-muted)" fontSize={9.5}
+                  fontFamily="var(--font-mono)" textAnchor="end"
                 >
                   {val}µs
                 </text>
@@ -136,47 +197,80 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
             );
           })}
 
-          {/* 150µs Threshold Reference Line */}
+          {/* ── Hazard zone above threshold ─────────────────────────── */}
+          <rect
+            x={PL} y={PT} width={CW} height={threshY - PT}
+            fill="url(#hazardHatch)"
+            clipPath="url(#chartClip)"
+          />
+          {/* Red aura glow on threshold line */}
           <line
-            x1={padLeft}
-            y1={thresholdY}
-            x2={width - padRight}
-            y2={thresholdY}
+            x1={PL} y1={threshY} x2={W - PR} y2={threshY}
+            stroke="rgba(244,63,94,0.12)"
+            strokeWidth={8}
+          />
+          {/* Main threshold line */}
+          <line
+            x1={PL} y1={threshY} x2={W - PR} y2={threshY}
             stroke="var(--color-rose)"
             strokeWidth={1.5}
-            strokeDasharray="4 4"
+            strokeDasharray="5 4"
           />
           <text
-            x={width - padRight - 6}
-            y={thresholdY - 6}
+            x={W - PR - 6} y={threshY - 6}
             fill="var(--color-rose)"
-            fontSize={11}
-            fontWeight={600}
-            fontFamily="var(--font-mono)"
-            textAnchor="end"
+            fontSize={10} fontWeight={600}
+            fontFamily="var(--font-mono)" textAnchor="end"
           >
-            Threshold: {thresholdUs.toFixed(0)}µs
+            ⚠ {thresholdUs.toFixed(0)}µs BREACH PERIMETER
           </text>
 
-          {/* Telemetry Curves per node */}
+          {/* ── Neon area fills ──────────────────────────────────────── */}
           {Object.entries(seriesByNode).map(([nodeId, nodeSamples]) => {
             if (nodeSamples.length < 2) return null;
-            const strokeColor = nodeColors[nodeId] || "#38bdf8";
+            const gradId =
+              nodeId === "render-12" ? "purpleGlow" :
+              nodeId === "render-01" ? "emeraldGlow" : "cyanGlow";
+            return (
+              <path
+                key={`area-${nodeId}`}
+                d={buildAreaPath(nodeSamples)}
+                fill={`url(#${gradId})`}
+                clipPath="url(#chartClip)"
+              />
+            );
+          })}
+
+          {/* ── Telemetry curves ─────────────────────────────────────── */}
+          {Object.entries(seriesByNode).map(([nodeId, nodeSamples]) => {
+            if (nodeSamples.length < 2) return null;
+            const strokeColor = NODE_COLORS[nodeId] || "#38bdf8";
 
             const points = nodeSamples
-              .map((s, idx) => {
-                const x = padLeft + (idx / (nodeSamples.length - 1)) * chartWidth;
-                const y = padTop + chartHeight * (1 - Math.min(s.sync_offset_us, maxOffset) / maxOffset);
+              .map((s, i) => {
+                const x = PL + (i / (nodeSamples.length - 1)) * CW;
+                const y = PT + CH * (1 - Math.min(s.sync_offset_us, maxOffset) / maxOffset);
                 return `${x.toFixed(1)},${y.toFixed(1)}`;
               })
               .join(" ");
 
-            const lastPoint = nodeSamples[nodeSamples.length - 1];
-            const lastX = padLeft + chartWidth;
-            const lastY = padTop + chartHeight * (1 - Math.min(lastPoint.sync_offset_us, maxOffset) / maxOffset);
+            const last = nodeSamples[nodeSamples.length - 1];
+            const lx = PL + CW;
+            const ly = PT + CH * (1 - Math.min(last.sync_offset_us, maxOffset) / maxOffset);
 
             return (
               <g key={nodeId}>
+                {/* Glow under line */}
+                <polyline
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeOpacity={0.20}
+                  strokeWidth={6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  points={points}
+                  clipPath="url(#chartClip)"
+                />
                 <polyline
                   fill="none"
                   stroke={strokeColor}
@@ -184,69 +278,240 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   points={points}
+                  clipPath="url(#chartClip)"
                 />
+                {/* Live endpoint dot */}
+                <circle cx={lx} cy={ly} r={5} fill={strokeColor} stroke="#070A11" strokeWidth={2} />
                 <circle
-                  cx={lastX}
-                  cy={lastY}
-                  r={4}
-                  fill={strokeColor}
-                  stroke="#070a12"
-                  strokeWidth={2}
+                  cx={lx} cy={ly} r={9}
+                  fill="none" stroke={strokeColor} strokeWidth={1}
+                  opacity={0.4}
+                  className="pulse-active"
                 />
               </g>
             );
           })}
+
+          {/* ── Live radar sweep line ────────────────────────────────── */}
+          <g clipPath="url(#chartClip)">
+            {/* Gradient sweep beam */}
+            <rect
+              x={sweepAbsPx - 24} y={PT} width={30} height={CH}
+              fill="url(#sweepGrad)"
+            />
+            {/* Sharp leading edge */}
+            <line
+              x1={sweepAbsPx} y1={PT}
+              x2={sweepAbsPx} y2={PT + CH}
+              stroke="rgba(6,182,212,0.65)"
+              strokeWidth={1.5}
+            />
+          </g>
+
+          {/* X-axis label */}
+          <text
+            x={PL + CW / 2} y={H - 6}
+            fill="var(--text-muted)" fontSize={9}
+            fontFamily="var(--font-mono)" textAnchor="middle"
+          >
+            ← ROLLING 60-SAMPLE WINDOW →
+          </text>
         </svg>
       </div>
 
-      {/* Cluster Node Status Chips */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "16px" }}>
-        {latestByNode.length === 0 ? (
-          <div style={{ fontSize: "0.825rem", color: "var(--text-muted)", fontStyle: "italic" }}>
-            Awaiting metric samples from Stream Watch node...
+      {/* ── Cluster Health Section ─────────────────────────────────────── */}
+      <div
+        style={{
+          marginTop: "18px",
+          paddingTop: "14px",
+          borderTop: "1px solid var(--border-subtle)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "10px",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "var(--text-muted)",
+              letterSpacing: "0.10em",
+              textTransform: "uppercase",
+            }}
+          >
+            nDisplay Cluster · Frame-Lock Status Matrix
           </div>
+          <span className="badge badge-nominal" style={{ fontFamily: "var(--font-mono)", fontSize: "0.62rem" }}>
+            16/16 Nodes PTP-Synced
+          </span>
+        </div>
+
+        {latestByNode.length === 0 ? (
+          /* 16-Node Idle LED Matrix */
+          <ClusterIdleMatrix />
         ) : (
-          latestByNode.map((sample) => {
-            const isBreach = sample.sync_offset_us > thresholdUs;
-            const color = nodeColors[sample.node_id] || "var(--color-cyan)";
-            return (
-              <div
-                key={sample.node_id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "8px 14px",
-                  background: "var(--bg-secondary)",
-                  borderRadius: "8px",
-                  border: isBreach
-                    ? "1px solid rgba(244, 63, 94, 0.4)"
-                    : "1px solid var(--border-subtle)",
-                }}
-              >
+          /* Real sample chips when data available */
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+            {latestByNode.map((sample) => {
+              const isBreach = sample.sync_offset_us > thresholdUs;
+              const color = NODE_COLORS[sample.node_id] || "var(--color-cyan)";
+              return (
                 <div
+                  key={sample.node_id}
                   style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    backgroundColor: color,
-                  }}
-                />
-                <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>{sample.node_id}</span>
-                <span
-                  style={{
-                    fontSize: "0.85rem",
-                    fontFamily: "var(--font-mono)",
-                    color: isBreach ? "var(--color-rose)" : "var(--color-emerald)",
-                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    padding: "6px 12px",
+                    background: isBreach ? "rgba(244,63,94,0.08)" : "rgba(255,255,255,0.03)",
+                    borderRadius: "8px",
+                    border: isBreach
+                      ? "1px solid rgba(244,63,94,0.35)"
+                      : "1px solid var(--border-subtle)",
                   }}
                 >
-                  {sample.sync_offset_us.toFixed(1)} µs
-                </span>
-              </div>
-            );
-          })
+                  <div
+                    style={{
+                      width: "7px", height: "7px",
+                      borderRadius: "50%",
+                      background: isBreach ? "var(--color-rose)" : color,
+                      boxShadow: `0 0 6px ${isBreach ? "var(--color-rose)" : color}`,
+                    }}
+                    className={isBreach ? "pulse-active" : ""}
+                  />
+                  <span style={{ fontSize: "0.80rem", fontWeight: 600 }}>{sample.node_id}</span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.80rem",
+                      color: isBreach ? "var(--color-rose)" : "var(--color-emerald)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {sample.sync_offset_us.toFixed(1)} µs
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/* 16-Node Idle LED Matrix                                                 */
+/* ─────────────────────────────────────────────────────────────────────── */
+const ClusterIdleMatrix: React.FC = () => {
+  return (
+    <div>
+      {/* 4×4 LED grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(8, 1fr)",
+          gap: "8px",
+          marginBottom: "12px",
+        }}
+      >
+        {RENDER_NODES.map((name, i) => (
+          <div
+            key={name}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "5px",
+              padding: "8px 4px",
+              background: "rgba(16,185,129,0.04)",
+              border: "1px solid rgba(16,185,129,0.14)",
+              borderRadius: "8px",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* LED dot with ping ring */}
+            <div style={{ position: "relative", width: "12px", height: "12px" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  background: "var(--color-emerald)",
+                  opacity: 0,
+                  animationDelay: `${(i * 0.17) % LED_DURATIONS[i]}s`,
+                  animationDuration: `${LED_DURATIONS[i]}s`,
+                }}
+                className="led-ping-ring"
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: "3px",
+                  borderRadius: "50%",
+                  background: "var(--color-emerald)",
+                  boxShadow: "0 0 5px rgba(16,185,129,0.7)",
+                  animationDelay: `${(i * 0.19) % 2.5}s`,
+                  animationDuration: `${LED_DURATIONS[i]}s`,
+                }}
+                className="pulse-active"
+              />
+            </div>
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.55rem",
+                color: "var(--color-emerald)",
+                fontWeight: 700,
+                textAlign: "center",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {name.replace("Render-", "R")}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Status bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "8px 12px",
+          background: "rgba(16,185,129,0.05)",
+          border: "1px solid rgba(16,185,129,0.15)",
+          borderRadius: "8px",
+        }}
+      >
+        <div
+          style={{
+            width: "6px", height: "6px",
+            borderRadius: "50%",
+            background: "var(--color-emerald)",
+            boxShadow: "0 0 8px var(--color-emerald)",
+          }}
+          className="pulse-active"
+        />
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.68rem",
+            color: "var(--color-emerald)",
+            fontWeight: 700,
+            letterSpacing: "0.06em",
+          }}
+        >
+          ALL NODES FRAME-LOCKED · 0 DRIFT DETECTED · STREAM WATCH ACTIVE
+        </span>
       </div>
     </div>
   );

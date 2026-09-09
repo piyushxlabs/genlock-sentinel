@@ -1,146 +1,165 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# STEP 20 COMPLETION CHECKLIST
-# Live Telemetry Drift Ingestion & End-to-End Verification
+# STEP 21 COMPLETION CHECKLIST
+# Hollywood ICVFX Mission Control Visual Elevation
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⏰ BEFORE running the next prompt — do these first:
+⏰ BEFORE running the next prompt — verify these first:
 
-[ ] Verify full test suite passes with 193 automated tests
+[ ] Frontend dev server is still running
     ```
-    cd "a:\Projects\GENLOCK SENTINEL\backend"
-    uv run pytest tests/ -v
+    # Should already be running from previous session:
+    # npm run dev (in A:\Projects\GENLOCK SENTINEL\frontend)
     ```
-    Expected: 193 passed in ~2.5s (or ~140s if running full telemetry exporter tests)
+    Expected: Server on http://localhost:3000/ (already confirmed running)
 
-[ ] Verify drift injection unit test suite passes independently
-    ```
-    cd "a:\Projects\GENLOCK SENTINEL\backend"
-    uv run pytest tests/unit/test_drift_injection.py -v
-    ```
-    Expected: 5 passed in ~3s
-
-[ ] Verify backend FastAPI server is running on port 8000
-    ```
-    curl http://127.0.0.1:8000/health
-    ```
-    Expected: {"status":"healthy","app_name":"genlock_sentinel","streaming_mode":"SSE",...}
-
-[ ] Verify frontend Vite dev server is running on port 3000
-    ```
-    curl http://localhost:3000
-    ```
-    Expected: HTTP 200 with HTML shell
+[ ] Hard-refresh the browser (Ctrl+Shift+R) to pick up hot-reloaded changes
+    Open: http://localhost:3000/
+    Expected: New dark carbon cockpit UI loads immediately
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏰ AFTER code was generated — do these now:
+⏰ AFTER code was generated — verify these now:
 
-[ ] Run live complex drift simulation to trigger the HITL Approval Modal on localhost:3000
+[ ] Build passes with zero errors
     ```
-    cd "a:\Projects\GENLOCK SENTINEL\backend"
-    uv run python scripts/simulate_drift.py --scenario complex
+    cd "A:\Projects\GENLOCK SENTINEL\frontend"
+    pnpm build
     ```
-    Expected:
-    [DRIFT EMITTED] Event: drift-evt-complex-... | Node: render-12
-    [HTTP DISPATCH] Successfully forwarded to http://127.0.0.1:8000/sessions/sentinel-icvfx-stage-01/inject-drift -> Status 202
-    If wrong: Check uvicorn process running on port 8000 via `uv run uvicorn src.main:app --port 8000`
+    Expected: `✓ built in ~3s` — zero TypeScript errors
+    ✅ ALREADY VERIFIED: 1868 modules transformed, 2.92s, exit code 0
 
-[ ] Observe live operations console on http://localhost:3000
-    Expected:
-    1. Real-time sync-offset chart spikes to 210.0 µs exceeding 150 µs red dotted line.
-    2. Step Tracker highlights: stream_watch -> evidence_triage -> root_cause_correlation -> hitl_card_generation -> hitl_pause.
-    3. Gemini reasoning tokens stream into the Diagnosis reasoning panel.
-    4. Blocking HITL Approval Modal pops up with:
-       - Proposed Action: 'none' (or 'halt_live_take')
-       - Escalation Reason: 'ambiguous_diagnosis'
-       - Cost Delta: '$0 (diagnostic pause)'
-       - Visual Impact: 'Moderate (sync jitter visible in camera pan)'
-       - Buttons: 'Approve' and 'Deny'
-    5. Stage burn counter accrues at $1,800/min.
+[ ] Visual inspection at http://localhost:3000/ — check each area:
 
-[ ] Test supervisor decision resolution in the modal:
-    Click 'Approve' or 'Deny' in the modal on http://localhost:3000
-    Expected: Modal dismisses, session status returns to 'MONITORING', audit record appended to Remediation Log.
+  HEADER:
+  [ ] "GENLOCK SENTINEL" text shows a gradient (white → light cyan)
+  [ ] Amber nuclear badge shows live ticking: $X.XX.XX format changing every frame
+  [ ] Subtext "CALCULATED AT $1,800/MIN PRODUCTION LOSS" visible below amount
+  [ ] Emergency Stop button shows diagonal hazard-stripe pattern
+  [ ] Session clock HH:MM:SS is counting up
+  [ ] Header has a 2px cyan top border accent
 
-[ ] Run live simple drift simulation to observe autonomous remediation:
-    ```
-    cd "a:\Projects\GENLOCK SENTINEL\backend"
-    uv run python scripts/simulate_drift.py --scenario simple
-    ```
-    Expected:
-    1. Sync-offset chart spikes to 185.4 µs.
-    2. Step Tracker animates through autonomous_dispatch.
-    3. Action 'failover_cluster_leadership' logged to Remediation Log without human approval.
+  STEP TRACKER (7-Node Pipeline):
+  [ ] Nodes are in a horizontal row connected by SVG arrows
+  [ ] Node 1 (Stream Watch) shows cyan halo-pulse ring (active)
+  [ ] Connector lines show animated moving-dash cyan arrows
+  [ ] Branch legend is visible at the bottom
+
+  CHART (Frame-Sync Telemetry):
+  [ ] A vertical beam/line is slowly sweeping left→right→left continuously
+  [ ] The sweep is visible even with no data loaded (idle state)
+  [ ] Threshold line has a red glowing aura/blur above it
+  [ ] Hazard hatch (diagonal stripe) pattern fills area above 150µs
+  [ ] 16-node Render-01 to Render-16 LED grid is visible below chart
+  [ ] Each node shows a pulsating green LED ping dot
+  [ ] "ALL NODES FRAME-LOCKED · 0 DRIFT DETECTED" status bar visible
+
+  EVIDENCE PANEL (empty state):
+  [ ] Rotating radar sweep SVG circle is animating
+  [ ] "LOKI / TEMPO MCP BUS ACTIVE" label blinks gently
+  [ ] Grafana MCP / Loki / Tempo status rows show green CONNECTED/ARMED labels
+
+  DIAGNOSIS PANEL (empty state):
+  [ ] Brain-wave EKG SVG with scanning dot is visible
+  [ ] "NODE 3 ARMED · AWAITING EVIDENCE BUNDLE" label blinks
+  [ ] Model config rows visible: Gemini 3.1 Pro, temp 0.0, etc.
+
+  BACKGROUND:
+  [ ] Page background is deep carbon (#070A11) — not pure black, not grey
+  [ ] Subtle cyan radial gradient visible at the top center
+  [ ] 32px grid lines faintly visible in the background
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/src/main.py` — Ingestion endpoint `POST /sessions/{session_id}/inject-drift` with `InjectDriftRequest`/`InjectDriftResponse` strict Pydantic V2 schemas, `merge-by-key` state reducer, real-time `SYNC_OFFSET_SAMPLE` emission, and background `_execute_drift_reasoning` trigger.
-[ ] File: `backend/src/agents/reasoning_loop.py` — Full `AGUIEventBridge` real-time broadcasting instrumentation emitting `STEP_STARTED`, `TOOL_CALL_*`, `REASONING_*` streaming tokens, RFC 6902 `STATE_DELTA`, and `RUN_PAUSED`.
-[ ] File: `backend/scripts/simulate_drift.py` — Auto-dispatching drift simulator defaulting to active console session (`sentinel-icvfx-stage-01`), `http://127.0.0.1:8000/sessions/{session_id}/inject-drift`, fresh event ID generation, and non-blocking `httpx` execution.
-[ ] File: `backend/tests/unit/test_drift_injection.py` — 5 unit tests verifying injection schema validation, 202 response, state mutations, and AG-UI event broadcasting.
-[ ] File: `backend/src/agents/evidence_triage.py` — Dynamic mock key resolution and event ID indexing.
-[ ] File: `backend/src/agents/root_cause_correlation.py` — Dynamic mock key resolution and target node ID scoping.
-[ ] File: `backend/src/agents/model_config.py` — Added `evidence_bundle_complex` fixture.
+[ ] File: `frontend/src/index.css` — complete carbon cockpit design system:
+    15+ new keyframes (halo-pulse, led-ping, radar-sweep, burn-micro, standby-blink),
+    32px CSS grid overlay on #root::before, glassmorphism with backdrop-blur(20px),
+    nuclear burn badge class, aircraft emergency stop with hazard stripe
+
+[ ] File: `frontend/src/components/StepTracker.tsx` — animated SVG workflow bus:
+    moving-dash connector lines energize left-to-right as steps complete,
+    cyan halo-pulse ring on active nodes, emerald ring on completed,
+    branch legend, RAF-driven tick animation
+
+[ ] File: `frontend/src/components/SyncOffsetChart.tsx` — broadcast-grade telemetry:
+    neon gradient area fill (cyanGlow linearGradient), red aura on threshold line,
+    SVG hazard hatch pattern above breach perimeter, live RAF radar sweep bounce,
+    16-node Render-01→Render-16 LED matrix with staggered emerald ping animations
+
+[ ] File: `frontend/src/components/EvidenceCard.tsx` — cybernetic MCP bus standby:
+    animated SVG radar circle sweep, Grafana/Loki/Tempo status rows,
+    standby-blink label
+
+[ ] File: `frontend/src/components/DiagnosisBadge.tsx` — armed standby sensor:
+    brain-wave SVG with scanning dot, model config panel, standby-blink label
+
+[ ] File: `frontend/src/App.tsx` — nuclear header elevation:
+    gradient logo, live ms burn ticker, production loss subtext,
+    session clock, Radio SSE indicator, aircraft emergency stop
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Test 1 — Files Exist:
+Test 1 — Build passes:
 ```
-dir /b "a:\Projects\GENLOCK SENTINEL\backend\tests\unit\test_drift_injection.py"
-```
-✅ Expected: test_drift_injection.py
-
-Test 2 — Dependencies & Environment:
-```
-cd "a:\Projects\GENLOCK SENTINEL\backend"
-uv run python --version
-```
-✅ Expected: Python 3.11.x
-
-Test 3 — Drift Injection Unit Test Suite:
-```
-cd "a:\Projects\GENLOCK SENTINEL\backend"
-uv run pytest tests/unit/test_drift_injection.py -v
-```
-✅ Expected: 5 passed, 0 failed
-
-Test 4 — Full Test Suite Across All Layers:
-```
-cd "a:\Projects\GENLOCK SENTINEL\backend"
-uv run pytest tests/ -q
-```
-✅ Expected: 193 passed
-
-Test 5 — Frontend Build Check:
-```
-cd "a:\Projects\GENLOCK SENTINEL\frontend"
+cd "A:\Projects\GENLOCK SENTINEL\frontend"
 pnpm build
 ```
-✅ Expected: 1868 modules transformed, 0 errors
+✅ Expected: `✓ built in ~3s` — zero TS errors
+❌ If errors: Check for any new unused variables — prefix with underscore
 
-Test 6 — Security Check:
-[ ] Verify .env is in .gitignore
+Test 2 — Files exist:
+```
+dir "A:\Projects\GENLOCK SENTINEL\frontend\src\components"
+dir "A:\Projects\GENLOCK SENTINEL\frontend\src"
+```
+✅ Expected: StepTracker.tsx, SyncOffsetChart.tsx, EvidenceCard.tsx,
+   DiagnosisBadge.tsx, App.tsx, index.css all present
+
+Test 3 — Live console at http://localhost:3000/:
+- Hard refresh (Ctrl+Shift+R)
+✅ Expected: Carbon cockpit UI loads, animations visible immediately
+❌ If blank page: Check browser console for errors
+
+Test 4 — Drift injection still works:
+```
+cd "A:\Projects\GENLOCK SENTINEL\backend"
+uv run python scripts/simulate_drift.py --scenario complex
+```
+✅ Expected: Chart shows spike, step tracker animates through all 7 nodes,
+   evidence panel fills with real data, diagnosis standby is replaced,
+   HITL modal appears
+❌ If backend not running: `uv run uvicorn src.main:app --port 8000`
+
+Test 5 — Interface boundary compliance:
+[ ] No chat box or free-text input anywhere on the page
+[ ] No manual actuator controls visible in the UI
+[ ] No raw credentials or internal session data visible
+[ ] Approve/Deny/Stop are the only action controls (modal only when pending)
+
+Test 6 — Security:
+[ ] .env is in .gitignore
     ```
-    type "a:\Projects\GENLOCK SENTINEL\.gitignore" | findstr ".env"
+    cat "A:\Projects\GENLOCK SENTINEL\.gitignore" | findstr ".env"
     ```
-    ✅ Expected: .env appears in the output
+    ✅ Expected: .env appears in output
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 GIT COMMIT
-(Run this ONLY after all above checks pass)
+(Run ONLY after all above checks pass)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ```
 git add .
-git commit -m "Step 20: Live Telemetry Drift Ingestion & Real-Time Event Dispatch — Ingestion endpoint, simulate_drift wireup, and AG-UI streaming"
+git commit -m "Step 21: Hollywood ICVFX Mission Control Visual Elevation — Carbon cockpit, animated SVG workflow bus, neon chart, radar sweep, LED matrix, nuclear burn badge"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step 21 until:
-[ ] All tests above show ✅
+✋ DO NOT proceed to Production Readiness until:
+[ ] All visual checks above show ✅
+[ ] pnpm build shows zero errors
+[ ] Drift injection demo still works end-to-end
 [ ] Git commit is done
-[ ] You have read do_after_completion.md fully
+[ ] You have read this file fully
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

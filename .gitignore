@@ -65,3 +65,11 @@ Thumbs.db
 *.json
 gcp-key.json
 backend/gcp-key.json
+
+
+
+progress_log.md
+project_state.md
+TECHNICAL_NOTES.md
+do_after_completion.md
+CLAUDE.md

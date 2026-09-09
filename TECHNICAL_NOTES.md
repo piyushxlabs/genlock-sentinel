@@ -159,3 +159,9 @@ Step 4 — No deviations from spec.
 **Impact:** Enables live interactive demonstrations of the full In-Camera VFX SRE agent loop from terminal to operations console on localhost:3000 in real time.
 ---
 
+---
+## Step 21 — requestAnimationFrame Radar Sweep vs. CSS Animation
+**Decision:** Implemented the chart radar sweep using `requestAnimationFrame` + `useState` bounce logic in `SyncOffsetChart.tsx` rather than a pure CSS `@keyframes` animation, because the bounce direction needs to reverse at chart boundaries and CSS animations cannot dynamically adjust `translateX` range without knowing the chart's pixel width at runtime.
+**Reason:** Pure CSS animations run between fixed `0%` and `100%` keyframes; reversing direction mid-animation requires JavaScript state. The RAF approach updates a `sweepX` percentage (0–100%) that maps to absolute SVG pixels at render time, giving a perfectly bounded sweep that never overflows the chart area.
+**Impact:** Adds one `requestAnimationFrame` loop per mounted `SyncOffsetChart` instance. This is deliberate — the chart is mounted once per console session and the loop is cancelled on unmount via the `useEffect` cleanup return.
+---

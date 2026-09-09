@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Film,
   Flame,
+  Radio,
 } from "lucide-react";
 import {
   AGUIStreamingClient,
@@ -19,7 +20,7 @@ import { RemediationLog } from "./components/RemediationLog";
 import { FailureBanner } from "./components/FailureBanner";
 
 const DEFAULT_SESSION_ID = "sentinel-icvfx-stage-01";
-const STAGE_BURN_RATE_PER_MIN = 1800; // $1,800/min stage burn ($108,000/hr)
+const STAGE_BURN_RATE_PER_MIN = 1800; // $1,800/min production loss
 
 export const App: React.FC = () => {
   const [sessionId] = useState(DEFAULT_SESSION_ID);
@@ -42,9 +43,23 @@ export const App: React.FC = () => {
   const [activeError, setActiveError] = useState<{ message: string; code: string } | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [haltingSession, setHaltingSession] = useState<boolean>(false);
 
-  // Initialize SSE streaming connection
+  // High-res burn ticker (60fps ms counter)
+  const msRef = useRef<number>(Date.now());
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const tick = () => {
+      setElapsedMs(Date.now() - msRef.current);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  // SSE connection
   useEffect(() => {
     const client = new AGUIStreamingClient(sessionId);
 
@@ -52,10 +67,7 @@ export const App: React.FC = () => {
       setState(newState);
       if (newState.error_logs.length > 0) {
         const latestErr = newState.error_logs[newState.error_logs.length - 1];
-        setActiveError({
-          message: latestErr.message,
-          code: latestErr.error_type,
-        });
+        setActiveError({ message: latestErr.message, code: latestErr.error_type });
       }
     });
 
@@ -84,7 +96,7 @@ export const App: React.FC = () => {
     client.connect();
     setConnected(true);
 
-    // Live session clock & stage burn ticker
+    // 1-second session clock
     const timer = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
@@ -95,11 +107,9 @@ export const App: React.FC = () => {
     };
   }, [sessionId]);
 
-  // Emergency Stop Handler
+  // Emergency Stop
   const handleEmergencyStop = async () => {
-    if (!confirm("Are you sure you want to execute an emergency stop? This halts all autonomous actions immediately.")) {
-      return;
-    }
+    if (!confirm("EMERGENCY STOP: This halts all autonomous actions immediately. Confirm?")) return;
     setHaltingSession(true);
     try {
       const res = await fetch(`/sessions/${sessionId}/stop`, {
@@ -124,16 +134,13 @@ export const App: React.FC = () => {
     }
   };
 
-  // Resolve active drift event & evidence
+  // Resolve state
   const latestDiagnosis =
     state.diagnosis_history.length > 0
       ? state.diagnosis_history[state.diagnosis_history.length - 1]
       : null;
-
   const activeEventId = latestDiagnosis?.event_id || Object.keys(state.active_drift_events)[0] || undefined;
   const activeEvidence = activeEventId ? state.evidence_bundle[activeEventId] : null;
-
-  // Active route
   const activeRoute: "autonomous" | "hitl" | null =
     state.pending_hitl_card || state.session_status === "awaiting_approval"
       ? "hitl"
@@ -141,24 +148,36 @@ export const App: React.FC = () => {
       ? "autonomous"
       : null;
 
-  // Stage burn cost calculation
-  const stageBurnAccrued = Math.round((elapsedSeconds / 60) * STAGE_BURN_RATE_PER_MIN);
+  // Stage burn cost — high precision
+  const stageBurnUsd    = (elapsedMs / 60000) * STAGE_BURN_RATE_PER_MIN;
+  const burnDollars     = Math.floor(stageBurnUsd);
+  const burnCents       = Math.floor((stageBurnUsd - burnDollars) * 100);
+  const burnMillis      = Math.floor(((stageBurnUsd - burnDollars) * 100 - burnCents) * 100);
+
+  // Session clock format
+  const hrs  = Math.floor(elapsedSeconds / 3600);
+  const mins = Math.floor((elapsedSeconds % 3600) / 60);
+  const secs = elapsedSeconds % 60;
+  const clockStr = [hrs, mins, secs].map((v) => String(v).padStart(2, "0")).join(":");
 
   return (
     <div className="console-container">
-      {/* Top Header Bar */}
+      {/* ── Top Header Bar ─────────────────────────────────────────────── */}
       <header className="console-header">
+        {/* Left: Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "42px",
-              height: "42px",
-              background: "rgba(6, 182, 212, 0.15)",
-              border: "1px solid rgba(6, 182, 212, 0.4)",
+              width: "44px",
+              height: "44px",
+              background: "rgba(6,182,212,0.12)",
+              border: "1px solid rgba(6,182,212,0.35)",
               borderRadius: "10px",
+              boxShadow: "0 0 16px rgba(6,182,212,0.12), inset 0 1px 0 rgba(6,182,212,0.15)",
+              flexShrink: 0,
             }}
           >
             <Film size={22} color="var(--color-cyan)" />
@@ -166,59 +185,132 @@ export const App: React.FC = () => {
 
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <h1 style={{ fontSize: "1.25rem", fontWeight: 800, letterSpacing: "-0.02em" }}>
+              <h1
+                style={{
+                  fontSize: "1.20rem",
+                  fontWeight: 800,
+                  letterSpacing: "-0.03em",
+                  background: "linear-gradient(90deg, #f0f4ff 0%, #a5f3fc 80%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
                 GENLOCK SENTINEL
               </h1>
-              <span className="badge badge-info">
-                v0.1.0 • ICVFX nDisplay SRE
-              </span>
+              <span className="badge badge-info">v0.1.0 · ICVFX nDisplay SRE</span>
             </div>
-            <div style={{ fontSize: "0.775rem", color: "var(--text-muted)", marginTop: "2px" }}>
-              Session: <span className="mono" style={{ color: "var(--text-secondary)" }}>{sessionId}</span> • Mode: <span style={{ color: "var(--color-cyan)", fontWeight: 600 }}>Semi-Autonomous (Locked)</span>
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.68rem",
+                color: "var(--text-muted)",
+                marginTop: "2px",
+                letterSpacing: "0.02em",
+              }}
+            >
+              Session:{" "}
+              <span style={{ color: "var(--text-secondary)" }}>{sessionId}</span>
+              {" · "}
+              Mode:{" "}
+              <span style={{ color: "var(--color-cyan)", fontWeight: 700 }}>
+                SEMI-AUTONOMOUS (LOCKED)
+              </span>
+              {" · "}
+              Clock:{" "}
+              <span style={{ color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>
+                {clockStr}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Status Metrics & Emergency Stop */}
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          {/* Connection Status */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-            <div
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: connected ? "var(--color-emerald)" : "var(--color-amber)",
-              }}
-              className={connected ? "" : "pulse-active"}
-            />
-            {connected ? "SSE Stream Connected" : "Connecting..."}
-          </div>
-
-          {/* Stage Burn Counter */}
+        {/* Right: Status strip */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          {/* SSE connection status */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "8px",
-              background: "rgba(245, 158, 11, 0.1)",
-              border: "1px solid rgba(245, 158, 11, 0.3)",
-              padding: "6px 14px",
-              borderRadius: "8px",
+              gap: "7px",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.72rem",
+              color: "var(--text-secondary)",
             }}
           >
-            <Flame size={16} color="var(--color-amber)" />
+            <Radio size={13} color={connected ? "var(--color-emerald)" : "var(--color-amber)"} />
+            <div
+              style={{
+                width: "7px",
+                height: "7px",
+                borderRadius: "50%",
+                background: connected ? "var(--color-emerald)" : "var(--color-amber)",
+                boxShadow: connected
+                  ? "0 0 8px var(--color-emerald)"
+                  : "0 0 8px var(--color-amber)",
+              }}
+              className={connected ? "" : "pulse-active"}
+            />
+            {connected ? "SSE CONNECTED" : "CONNECTING..."}
+          </div>
+
+          {/* ── Nuclear Stage Burn Badge ─────────────────────────────── */}
+          <div className="burn-badge">
+            <Flame
+              size={18}
+              color="var(--color-amber)"
+              style={{ filter: "drop-shadow(0 0 6px rgba(245,158,11,0.7))", flexShrink: 0 }}
+            />
             <div>
-              <div style={{ fontSize: "0.675rem", textTransform: "uppercase", color: "var(--color-amber)", fontWeight: 700 }}>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.60rem",
+                  fontWeight: 700,
+                  color: "var(--color-amber)",
+                  letterSpacing: "0.10em",
+                  textTransform: "uppercase",
+                }}
+              >
                 Stage Burn Accrued
               </div>
-              <div className="mono" style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>
-                ${stageBurnAccrued.toLocaleString()} USD
+              {/* Live ticking burn value */}
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  color: "#fef3c7",
+                  lineHeight: 1,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                ${burnDollars.toLocaleString()}
+                <span style={{ fontSize: "0.65rem", color: "var(--color-amber)", opacity: 0.8 }}>
+                  .{String(burnCents).padStart(2, "0")}
+                  <span className="burn-ticker" style={{ fontSize: "0.55rem", opacity: 0.55 }}>
+                    {String(burnMillis).padStart(2, "0")}
+                  </span>
+                </span>
+                <span style={{ fontSize: "0.70rem", color: "var(--color-amber)", fontWeight: 600, marginLeft: "4px" }}>
+                  USD
+                </span>
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.56rem",
+                  color: "rgba(245,158,11,0.65)",
+                  marginTop: "1px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                CALCULATED AT $1,800/MIN PRODUCTION LOSS
               </div>
             </div>
           </div>
 
-          {/* Session Status Chip */}
+          {/* Session status chip */}
           <span
             className={`badge ${
               state.session_status === "stopped"
@@ -231,14 +323,15 @@ export const App: React.FC = () => {
             {state.session_status.toUpperCase()}
           </span>
 
-          {/* Emergency Stop Button */}
+          {/* ── Aircraft-Grade Emergency Stop ────────────────────────── */}
           <button
             onClick={handleEmergencyStop}
             disabled={haltingSession || state.session_status === "stopped"}
             className="btn btn-emergency-stop"
+            title="Execute emergency halt of all autonomous agent actions"
           >
-            <AlertTriangle size={15} />
-            {state.session_status === "stopped" ? "Session Halted" : "Emergency Stop"}
+            <AlertTriangle size={14} />
+            {state.session_status === "stopped" ? "SESSION HALTED" : "EMERGENCY STOP"}
           </button>
         </div>
       </header>
@@ -247,7 +340,7 @@ export const App: React.FC = () => {
       <FailureBanner error={activeError} onDismiss={() => setActiveError(null)} />
 
       {/* 7-Node ADK Workflow Graph Tracker */}
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "20px" }}>
         <StepTracker
           currentStep={currentStep}
           historySteps={historySteps}
@@ -258,34 +351,24 @@ export const App: React.FC = () => {
       {/* Main Console Split Layout */}
       <div className="console-grid console-grid-split">
         {/* Left Column: Observability & Diagnostics */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {/* Prometheus Real-Time Sync-Offset Chart */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
-
-          {/* Root-Cause Diagnosis Badge & Reasoning Panel */}
-          <DiagnosisBadge
-            diagnosis={latestDiagnosis}
-            streamingReasoning={streamingReasoning}
-          />
-
-          {/* Triaged Evidence Bundle (Loki & Tempo) */}
+          <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
           <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
         </div>
 
         {/* Right Column: Remediation & Actuators */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {/* Chronological Remediation Log */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <RemediationLog logs={state.remediation_log} />
         </div>
       </div>
 
-      {/* HITL Modal Overlay for Supervisor Sign-off */}
+      {/* HITL Approval Modal */}
       {state.pending_hitl_card && state.session_status === "awaiting_approval" && (
         <ApprovalCardModal
           card={state.pending_hitl_card}
           sessionId={sessionId}
           onDecisionSubmitted={() => {
-            // Local state mutation will also be updated via SSE STATE_DELTA
             setState((prev) => ({
               ...prev,
               session_status: "monitoring",

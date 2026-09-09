@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, Dict, List
+from uuid import uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -97,7 +98,7 @@ async def test_inject_drift_complex_scenario_emits_all_ui_events_and_pauses():
     emitting SYNC_OFFSET_SAMPLE, STEP_STARTED, TOOL_CALL_*, REASONING_*, STATE_DELTA,
     and pauses at HITL Approval Modal (RUN_PAUSED).
     """
-    session_id = "test-session-complex-stream"
+    session_id = f"test-session-complex-stream-{uuid4().hex[:6]}"
     bridge = get_event_bridge()
     subscriber_queue = await bridge.register_subscriber(session_id)
 
@@ -169,7 +170,7 @@ async def test_inject_drift_complex_scenario_emits_all_ui_events_and_pauses():
 @pytest.mark.asyncio
 async def test_inject_drift_simple_scenario_autonomous_remediation():
     """Verifies that injecting a simple drift event executes autonomous remediation."""
-    session_id = "test-session-simple-stream"
+    session_id = f"test-session-simple-stream-{uuid4().hex[:6]}"
     bridge = get_event_bridge()
     subscriber_queue = await bridge.register_subscriber(session_id)
 
