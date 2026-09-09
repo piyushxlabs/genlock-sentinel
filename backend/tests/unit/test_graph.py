@@ -392,8 +392,18 @@ async def test_node6_pause_and_node7_post_approval_handling():
     assert "hitl_supervisor_approval" in events[0].long_running_tool_ids
 
     # 2. Node 7 Post-Approval test (approval_state == APPROVED)
+    drift_card_node = DriftEvent(
+        event_id=card.event_id,
+        node_id="render-12",
+        frame_id="f-144025",
+        breach_ts=utc_now_iso(),
+        sync_offset_us=210.0,
+        threshold_us=150.0,
+        status="detected",
+    )
     state_approved = GenlockSentinelState(
         session_id="test-session-n6-7",
+        active_drift_events={"render-12": drift_card_node},
         pending_hitl_card=card,
         approval_state=ApprovalStatus.APPROVED,
     )
@@ -405,10 +415,13 @@ async def test_node6_pause_and_node7_post_approval_handling():
     assert res_post["action_taken"] == "halt_live_take"
     assert res_post["success"] is True
     assert ctx_post_approved.actions.state_delta["session_status"] == SessionStatus.MONITORING.value
+    assert ctx_post_approved.actions.state_delta["pending_hitl_card"] is None
+    assert ctx_post_approved.actions.state_delta["active_drift_events"] == {}
 
     # 3. Node 7 Denial test (approval_state == DENIED)
     state_denied = GenlockSentinelState(
         session_id="test-session-n6-7",
+        active_drift_events={"render-12": drift_card_node},
         pending_hitl_card=card,
         approval_state=ApprovalStatus.DENIED,
     )
@@ -419,6 +432,8 @@ async def test_node6_pause_and_node7_post_approval_handling():
     res_denied = await post_approval_handling_node(ctx_post_denied)
     assert res_denied["action_taken"] == "denied_halt_live_take"
     assert ctx_post_denied.actions.state_delta["session_status"] == SessionStatus.MONITORING.value
+    assert ctx_post_denied.actions.state_delta["pending_hitl_card"] is None
+    assert ctx_post_denied.actions.state_delta["active_drift_events"] == {}
 
 
 @pytest.mark.asyncio

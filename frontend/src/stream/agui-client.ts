@@ -176,6 +176,15 @@ export function applyStateDelta(state: GenlockState, ops: StateDeltaOp[]): Genlo
       } else {
         (next as any)[field] = op.value;
       }
+    } else if (op.op === "remove") {
+      if (segments.length === 2) {
+        const key = segments[1];
+        const currentObj = { ...((next[field] as Record<string, any>) || {}) };
+        delete currentObj[key];
+        (next as any)[field] = currentObj;
+      } else {
+        (next as any)[field] = null;
+      }
     }
   }
 

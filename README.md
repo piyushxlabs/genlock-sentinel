@@ -22,10 +22,10 @@
 > ### 📺 **Official Video Demonstration & Architecture Walkthrough (3-Minute Master Walkthrough — 1080p60)**
 >
 > <div align="center">
->   <a href="https://youtu.be/SqhjPxpT9OE" target="_blank">
+>   <a href="https://youtu.be/Pr457VOV_Pk" target="_blank">
 >     <img src="./assets/demo_thumbnail.png" alt="Genlock Sentinel Video Walkthrough" width="100%" style="border-radius: 10px; max-width: 820px;" />
 >   </a>
->   <p><strong>▶️ <a href="https://youtu.be/SqhjPxpT9OE" target="_blank">Click to Watch 3-Minute Architecture Walkthrough & Live Stage Drift Remediation on YouTube</a></strong></p>
+>   <p><strong>▶️ <a href="https://youtu.be/Pr457VOV_Pk" target="_blank">Click to Watch 3-Minute Architecture Walkthrough & Live Stage Drift Remediation on YouTube</a></strong></p>
 >   <p><em>Dual-Model Vertex AI Topology • Sub-Second Grafana MCP Telemetry Triage • Reversible Actuation & HITL Safety Checkpoint</em></p>
 > </div>
 

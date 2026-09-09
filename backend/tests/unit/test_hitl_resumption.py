@@ -24,6 +24,7 @@ from src.main import app
 from src.state.checkpointing import load_checkpoint, save_checkpoint
 from src.state.schema import (
     ApprovalStatus,
+    DriftEvent,
     GenlockSentinelState,
     HITLCard,
     SessionStatus,
@@ -75,11 +76,21 @@ async def test_hitl_coordinator_approve_halt_live_take() -> None:
     event_id = "evt-halt-01"
 
     card = _create_sample_card(event_id=event_id, proposed_action="halt_live_take")
+    drift = DriftEvent(
+        event_id=event_id,
+        node_id="render-07",
+        frame_id="f-100",
+        breach_ts="2026-09-09T12:00:00Z",
+        sync_offset_us=210.0,
+        threshold_us=150.0,
+        status="detected",
+    )
     state = GenlockSentinelState(
         session_id=session_id,
         session_status=SessionStatus.AWAITING_APPROVAL,
         approval_state=ApprovalStatus.PENDING,
         pending_hitl_card=card,
+        active_drift_events={"render-07": drift},
     )
     await save_checkpoint(session_id=session_id, state=state)
 
@@ -108,6 +119,8 @@ async def test_hitl_coordinator_approve_halt_live_take() -> None:
     assert saved_state is not None
     assert saved_state.approval_state == ApprovalStatus.APPROVED
     assert saved_state.session_status == SessionStatus.MONITORING
+    assert saved_state.pending_hitl_card is None
+    assert "render-07" not in saved_state.active_drift_events
 
     # Verify remediation_log has approval audit and executed tool
     actions = [a.action_taken for a in saved_state.remediation_log]
@@ -209,11 +222,21 @@ async def test_hitl_coordinator_deny_flow_audit_logging() -> None:
     event_id = "evt-deny-01"
 
     card = _create_sample_card(event_id=event_id, proposed_action="halt_live_take")
+    drift = DriftEvent(
+        event_id=event_id,
+        node_id="render-07",
+        frame_id="f-100",
+        breach_ts="2026-09-09T12:00:00Z",
+        sync_offset_us=210.0,
+        threshold_us=150.0,
+        status="detected",
+    )
     state = GenlockSentinelState(
         session_id=session_id,
         session_status=SessionStatus.AWAITING_APPROVAL,
         approval_state=ApprovalStatus.PENDING,
         pending_hitl_card=card,
+        active_drift_events={"render-07": drift},
     )
     await save_checkpoint(session_id=session_id, state=state)
 
@@ -242,6 +265,8 @@ async def test_hitl_coordinator_deny_flow_audit_logging() -> None:
     assert saved_state is not None
     assert saved_state.approval_state == ApprovalStatus.DENIED
     assert saved_state.session_status == SessionStatus.MONITORING
+    assert saved_state.pending_hitl_card is None
+    assert "render-07" not in saved_state.active_drift_events
 
     # Assert zero action tools fired (no halt_live_take success record)
     assert not any(

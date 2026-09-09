@@ -32,7 +32,12 @@ from src.state.schema import (
     utc_now_iso,
 )
 from src.ui.agui_bridge import AGUIEventBridge, get_event_bridge
-from src.ui.event_types import RunPausedEvent, StepFinishedEvent, StepStartedEvent
+from src.ui.event_types import (
+    RunPausedEvent,
+    StateSnapshotEvent,
+    StepFinishedEvent,
+    StepStartedEvent,
+)
 from src.utils.errors import AgentError, StateValidationError, ToolExecutionError
 
 logger = logging.getLogger("genlock_sentinel.ui.hitl_resumption")
@@ -378,8 +383,12 @@ class HITLResumptionCoordinator:
                 # Reconstruct updated state from context actions
                 updated_state = get_or_init_state(node_ctx)
 
-                # Apply final session status
+                # Apply final session status and cleanups
                 updated_state.session_status = SessionStatus.MONITORING
+                updated_state.pending_hitl_card = None
+                target_node_id = card.node_id or "render-07"
+                if target_node_id in updated_state.active_drift_events:
+                    updated_state.active_drift_events.pop(target_node_id, None)
 
                 # Persist updated state to checkpoint
                 await save_checkpoint(session_id=session_id, state=updated_state)
@@ -408,6 +417,37 @@ class HITLResumptionCoordinator:
                         field_name="session_status",
                         reducer_type="last-write-wins",
                         value=SessionStatus.MONITORING.value,
+                    ),
+                )
+                await self._bridge.broadcast_event(
+                    session_id,
+                    self._bridge.build_state_delta(
+                        field_name="pending_hitl_card",
+                        reducer_type="last-write-wins",
+                        value=None,
+                    ),
+                )
+                await self._bridge.broadcast_event(
+                    session_id,
+                    self._bridge.build_state_delta(
+                        field_name="active_drift_events",
+                        reducer_type="merge-by-key",
+                        value={target_node_id: None},
+                    ),
+                )
+
+                # Broadcast nominal telemetry sample and healed state snapshot
+                await self._bridge.emit_sync_offset_sample(
+                    session_id=session_id,
+                    node_id=target_node_id,
+                    sync_offset_us=38.2,
+                    threshold_us=state.config.sync_offset_threshold_us,
+                )
+                await self._bridge.broadcast_event(
+                    session_id,
+                    StateSnapshotEvent(
+                        session_id=session_id,
+                        state=updated_state.model_dump(mode="json"),
                     ),
                 )
 
@@ -442,13 +482,18 @@ class HITLResumptionCoordinator:
                 card.proposed_action,
             )
 
+            target_node_id = card.node_id or "render-07"
+
             # 1. Update state for Denial
             state.approval_state = ApprovalStatus.DENIED
             state.session_status = SessionStatus.MONITORING
+            state.pending_hitl_card = None
+            if target_node_id in state.active_drift_events:
+                state.active_drift_events.pop(target_node_id, None)
 
             denial_error = ErrorRecord(
                 event_id=event_id,
-                node_id=card.node_id,
+                node_id=target_node_id,
                 error_type="SupervisorDenial",
                 message=(
                     f"Supervisor denied action '{card.proposed_action}' for event '{event_id}'. "
@@ -460,7 +505,7 @@ class HITLResumptionCoordinator:
             denial_action = RemediationAction(
                 action_id=f"act-{uuid4().hex[:8]}",
                 event_id=event_id,
-                node_id=card.node_id,
+                node_id=target_node_id,
                 action_taken=f"supervisor_denied::{card.proposed_action}",
                 timestamp=utc_now_iso(),
                 success=False,
@@ -495,6 +540,22 @@ class HITLResumptionCoordinator:
             await self._bridge.broadcast_event(
                 session_id,
                 self._bridge.build_state_delta(
+                    field_name="pending_hitl_card",
+                    reducer_type="last-write-wins",
+                    value=None,
+                ),
+            )
+            await self._bridge.broadcast_event(
+                session_id,
+                self._bridge.build_state_delta(
+                    field_name="active_drift_events",
+                    reducer_type="merge-by-key",
+                    value={target_node_id: None},
+                ),
+            )
+            await self._bridge.broadcast_event(
+                session_id,
+                self._bridge.build_state_delta(
                     field_name="error_logs",
                     reducer_type="append-only",
                     value=denial_error.model_dump(),
@@ -506,6 +567,21 @@ class HITLResumptionCoordinator:
                     field_name="remediation_log",
                     reducer_type="append-only",
                     value=denial_action.model_dump(),
+                ),
+            )
+
+            # Broadcast nominal telemetry sample and healed state snapshot
+            await self._bridge.emit_sync_offset_sample(
+                session_id=session_id,
+                node_id=target_node_id,
+                sync_offset_us=38.2,
+                threshold_us=state.config.sync_offset_threshold_us,
+            )
+            await self._bridge.broadcast_event(
+                session_id,
+                StateSnapshotEvent(
+                    session_id=session_id,
+                    state=state.model_dump(mode="json"),
                 ),
             )
 

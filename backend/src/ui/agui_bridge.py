@@ -124,16 +124,28 @@ class AGUIEventBridge:
                 if isinstance(value, BaseModel):
                     key = getattr(value, "event_id", None) or getattr(value, "node_id", None)
                 elif isinstance(value, dict):
-                    key = value.get("event_id") or value.get("node_id")
+                    if len(value) == 1 and list(value.values())[0] is None:
+                        key = list(value.keys())[0]
+                    else:
+                        key = value.get("event_id") or value.get("node_id")
             if not key:
                 raise ValueError("merge-by-key reducer requires a non-empty key parameter.")
-            ops.append(
-                StateDeltaOp(
-                    op="add",
-                    path=f"/{field_name}/{key}",
-                    value=serialized_value,
+
+            if value is None or (isinstance(value, dict) and value.get(key) is None):
+                ops.append(
+                    StateDeltaOp(
+                        op="remove",
+                        path=f"/{field_name}/{key}",
+                    )
                 )
-            )
+            else:
+                ops.append(
+                    StateDeltaOp(
+                        op="add",
+                        path=f"/{field_name}/{key}",
+                        value=serialized_value,
+                    )
+                )
         elif reducer_type == "last-write-wins":
             ops.append(
                 StateDeltaOp(
