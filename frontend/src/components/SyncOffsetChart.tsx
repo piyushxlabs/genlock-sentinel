@@ -96,7 +96,15 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
   const sweepAbsPx = PL + (sweepX / 100) * CW;
 
   return (
-    <div className="glass-panel" style={{ padding: "20px" }}>
+    <div
+      className="glass-panel"
+      style={{
+        padding: "20px",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Header */}
       <div
         style={{
@@ -132,8 +140,8 @@ export const SyncOffsetChart: React.FC<SyncOffsetChartProps> = ({
       </div>
 
       {/* Chart SVG */}
-      <div style={{ width: "100%", overflowX: "auto", position: "relative" }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+      <div style={{ flex: "1 1 0", minHeight: 0, overflowX: "auto", position: "relative" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "100%", display: "block" }}>
           <defs>
             {/* Neon cyan area fill gradient */}
             <linearGradient id="cyanGlow" x1="0" y1="0" x2="0" y2="1">

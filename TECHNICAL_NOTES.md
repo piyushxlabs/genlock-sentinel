@@ -186,3 +186,10 @@ Step 4 — No deviations from spec.
 **Reason:** Fulfills `AGENT_MASTER_PLAN.md` Section 8, Section 9.5 Simulation 2, and Section 9.6 Non-Negotiable 3. Once an on-set emergency stop is triggered, the cluster must be considered in a halted/safe state; resuming pending approval decisions on stopped sessions is an invariant violation.
 **Impact:** Guarantees that emergency stop is irreversible from the standard HITL decision modal, requiring a fresh session initialization to resume cluster monitoring.
 ---
+
+---
+## Step 21 — Cockpit Scroll Affordance & Automatic Card Peeking
+**Decision:** Configured right-column container `.cockpit-col-right` with `max-height: 680px`, custom slim cyberpunk scrollbar `.cockpit-scroll` (`6px` width, cyan `#06b6d4` thumb with hover illumination), and capped `DiagnosisBadge` / `DiagnosisStandbyPanel` at `maxHeight: 320px` with internal scroll. Added an ambient `"Scrollable Feed ↕"` micro-badge at the header.
+**Reason:** Ensures that when judges or operators view the console, the top edge of `EvidenceCard` (Node 2 Observability) peeks into view automatically below `DiagnosisBadge`, visually signaling that deeper diagnostic evidence is available in the right-column feed while maintaining a locked 100dvh viewport height.
+**Impact:** Eliminates layout ambiguity, enhances scroll affordance, and prevents content clipping across high-density ICVFX console displays.
+---

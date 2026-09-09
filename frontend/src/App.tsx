@@ -340,7 +340,7 @@ export const App: React.FC = () => {
       <FailureBanner error={activeError} onDismiss={() => setActiveError(null)} />
 
       {/* 7-Node ADK Workflow Graph Tracker */}
-      <div style={{ marginBottom: "20px" }}>
+      <div className="step-tracker-wrapper">
         <StepTracker
           currentStep={currentStep}
           historySteps={historySteps}
@@ -348,17 +348,47 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* Main Console Split Layout */}
-      <div className="console-grid console-grid-split">
-        {/* Left Column: Observability & Diagnostics */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {/* ── Main 12-Column Cockpit Grid ─────────────────────────────────
+           Left  (xl: 7/12): SyncOffsetChart + LED matrix
+           Right (xl: 5/12): Diagnosis · Evidence · Remediation
+      ──────────────────────────────────────────────────────────────── */}
+      <div className="cockpit-grid">
+        {/* Left column — telemetry */}
+        <div className="cockpit-col-left">
           <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
-          <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
-          <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
         </div>
 
-        {/* Right Column: Remediation & Actuators */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* Right column — diagnosis, evidence, remediation */}
+        <div className="cockpit-col-right cockpit-scroll">
+          {/* Subtle scroll hint affordance */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              paddingRight: "2px",
+              marginBottom: "-4px",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "10px",
+                color: "rgba(6, 182, 212, 0.7)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                background: "rgba(6, 182, 212, 0.06)",
+                border: "1px solid rgba(6, 182, 212, 0.2)",
+                padding: "2px 6px",
+                borderRadius: "4px",
+              }}
+            >
+              Scrollable Feed ↕
+            </span>
+          </div>
+
+          <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
+          <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
           <RemediationLog logs={state.remediation_log} />
         </div>
       </div>

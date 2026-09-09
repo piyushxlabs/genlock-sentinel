@@ -790,3 +790,31 @@
 - `uv run pytest tests/ -q`: 209 passed, 6 warnings in 15.34s across all unit, eval, and e2e suites (100%).
 - Pass
 ---
+
+---
+## Step 21 — Cockpit Scroll Affordance & Visual Card Peeking
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Added custom cyberpunk slim scrollbar styling `.cockpit-scroll` in `frontend/src/index.css` with 6px width, `rgba(15, 23, 42, 0.6)` track, `rgba(6, 182, 212, 0.4)` cyan thumb with border, and `rgba(6, 182, 212, 0.8)` hover glow.
+- Configured right-column container `.cockpit-col-right` with `max-height: 680px`, `overflow-y: auto`, `gap: 12px`, and `padding-right: 8px`.
+- Added subtle glowing micro-badge affordance at top-right header of right column feed in `frontend/src/App.tsx`: `<span className="text-[10px] font-mono text-cyan-400/70 uppercase tracking-wider">Scrollable Feed ↕</span>`.
+- Capped `DiagnosisBadge` and `DiagnosisStandbyPanel` in `frontend/src/components/DiagnosisBadge.tsx` at `maxHeight: 320px` with internal scroll/overflow management so the top edge of `EvidenceCard` peeks into view automatically, visually signaling judges that more observability content exists below.
+- Verified TypeScript compilation and bundling via `pnpm build` (`tsc && vite build`: zero errors in 2.44s).
+
+**Files Created:**
+- None
+
+**Files Modified:**
+- `frontend/src/index.css` — Added `.cockpit-scroll` custom scrollbar classes and updated `.cockpit-col-right` max-height to 680px.
+- `frontend/src/App.tsx` — Applied `cockpit-scroll` class and added `"Scrollable Feed ↕"` micro-badge header.
+- `frontend/src/components/DiagnosisBadge.tsx` — Capped `DiagnosisBadge` and `DiagnosisStandbyPanel` height to 320px for automatic card peeking.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed in 2.44s.
+- Pass
+---

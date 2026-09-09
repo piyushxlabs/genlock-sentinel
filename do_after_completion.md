@@ -1,18 +1,18 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # STEP 21 COMPLETION CHECKLIST
-# Production Readiness Check & Final System Audit
+# Cockpit Scroll Affordance & Visual Card Peeking
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ⏰ BEFORE running the next prompt — do these first:
 
-[ ] Verify backend environment has the test suite ready
+[ ] Verify frontend production bundle builds cleanly
     ```powershell
-    cd "A:\Projects\GENLOCK SENTINEL\backend"
-    uv run pytest tests/evals/test_production_readiness.py -v
+    cd "A:\Projects\GENLOCK SENTINEL\frontend"
+    pnpm build
     ```
-    Expected: 14 passed in ~1-2 seconds with 100% success rate
+    Expected: `✓ built in ~2-3s` with 0 TypeScript errors.
 
-[ ] Verify full backend test suite passes across all 209 tests
+[ ] Verify backend test suite remains 100% passing
     ```powershell
     cd "A:\Projects\GENLOCK SENTINEL\backend"
     uv run pytest tests/ -q
@@ -22,112 +22,78 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⏰ AFTER code was generated — do these now:
 
-[ ] Verify production readiness evaluations specifically:
+[ ] Verify right-column scrollbar styling in `frontend/src/index.css`:
     ```powershell
-    cd "A:\Projects\GENLOCK SENTINEL\backend"
-    uv run pytest tests/evals/test_production_readiness.py -k "test_simulation" -v
+    Get-Content "A:\Projects\GENLOCK SENTINEL\frontend\src\index.css" | Select-String "cockpit-scroll"
     ```
-    Expected: All 6 Section 9.5 failure simulations pass:
-    - `test_simulation_1_loki_retry_exhaustion_telemetry_gap`
-    - `test_simulation_2_emergency_stop_mid_diagnostic_cycle`
-    - `test_simulation_3_malformed_drift_event_rejected`
-    - `test_simulation_4_ast_import_boundary_check_prohibited_tools`
-    - `test_simulation_5_unattended_pending_hitl_card_safety`
-    - `test_simulation_6_tool_malformed_json_output_rejected`
-    If wrong: Ensure `GENLOCK_SENTINEL_FORCE_MOCK=true` is set.
+    Expected: `.cockpit-scroll::-webkit-scrollbar`, `.cockpit-scroll::-webkit-scrollbar-thumb`
 
-[ ] Verify Section 9.6 non-negotiable verification requirements:
+[ ] Verify scroll affordance micro-badge in `frontend/src/App.tsx`:
     ```powershell
-    cd "A:\Projects\GENLOCK SENTINEL\backend"
-    uv run pytest tests/evals/test_production_readiness.py -k "test_non_negotiable" -v
+    Get-Content "A:\Projects\GENLOCK SENTINEL\frontend\src\App.tsx" | Select-String "Scrollable Feed"
     ```
-    Expected: All 5 non-negotiable tests pass (single-pass loop caps, 5 structural prohibitions, emergency stop invariant, 10 reducer invariants, HITL approve/deny paths).
+    Expected: `Scrollable Feed ↕`
 
-[ ] Verify Section 2 production configuration and credentials audit:
+[ ] Verify card height capping in `frontend/src/components/DiagnosisBadge.tsx`:
     ```powershell
-    cd "A:\Projects\GENLOCK SENTINEL\backend"
-    uv run pytest tests/evals/test_production_readiness.py -k "test_audit" -v
+    Get-Content "A:\Projects\GENLOCK SENTINEL\frontend\src\components\DiagnosisBadge.tsx" | Select-String "320px"
     ```
-    Expected: All 3 audit tests pass (zero hardcoded secrets in `backend/src`, complete `.env.example`, verified `postgresql+asyncpg` configuration).
-
-[ ] Verify frontend production bundle builds cleanly:
-    ```powershell
-    cd "A:\Projects\GENLOCK SENTINEL\frontend"
-    pnpm build
-    ```
-    Expected: `✓ built in ~3s` with 0 errors.
+    Expected: `maxHeight: "320px"` on both active and standby panels.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ WHAT GOT BUILT THIS STEP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[ ] File: `backend/tests/evals/test_production_readiness.py` — Authoritative production readiness evaluation suite verifying Section 9.5 failure simulations, Section 9.6 non-negotiables, and Section 2 production configuration & credential audits.
-[ ] File: `backend/src/agents/post_approval_handling.py` — Supervisor acknowledgment handling for diagnostic pause cards where `proposed_action` is `'none'`, returning cleanly without actuator dispatch.
-[ ] File: `backend/src/utils/errors.py` — Added `PostApprovalExecutionError(ToolExecutionError)` to custom `AgentError` hierarchy.
-[ ] File: `backend/src/ui/hitl_resumption.py` — Terminal session status verification (`STOPPED`, `FAILED`) rejecting resumption on stopped sessions with HTTP 400.
-[ ] File: `backend/src/safety/prohibition_guards.py` — Enhanced category and confidence extraction in `validate_tool_dispatch_preconditions` to handle serialized dictionary state cleanly.
-[ ] File: `backend/tests/conftest.py` — Global autouse fixture defaulting `GENLOCK_SENTINEL_FORCE_MOCK=true` for deterministic, sub-16s test suite execution.
-[ ] File: `backend/tests/unit/test_hitl_resumption.py` — Added unit tests verifying supervisor approval when `proposed_action="none"` and `proposed_action="none (diagnostic pause)"`.
-[ ] Feature: Section 9.5 Failure Simulation 1 — Loki 3-retry exhaustion sets evidence-gap flag `logs_available=False` with zero hallucinated log lines.
-[ ] Feature: Section 9.5 Failure Simulation 2 — Emergency Stop mid-diagnostic cycle cleanly halts session and preserves checkpoint as `SessionStatus.STOPPED`.
-[ ] Feature: Section 9.5 Failure Simulation 3 — Malformed drift events (missing `frame_id` or extra unauthorized fields) strictly rejected by Pydantic V2 schema.
-[ ] Feature: Section 9.5 Failure Simulation 4 — Static AST import-boundary audit guarantees cognitive nodes never import Tools 7–9.
-[ ] Feature: Section 9.5 Failure Simulation 5 — Unattended pending HITL cards remain safely paused in `AWAITING_APPROVAL` with zero autonomous default actuation.
-[ ] Feature: Section 9.5 Failure Simulation 6 — Malformed tool JSON outputs rejected before entering state or evidence bundles.
-[ ] Feature: Section 9.6 Non-Negotiables — Verified 1-pass cycle cap, 5 structural prohibitions, emergency stop invariants, 10 reducer invariants, and HITL approve/deny paths.
+[ ] File: `frontend/src/index.css` — Custom `.cockpit-scroll` cyberpunk scrollbar styling with 6px cyan thumb, `max-height: 680px`, and 12px gap.
+[ ] File: `frontend/src/App.tsx` — Applied `.cockpit-scroll` class to right-column container and added glowing `"Scrollable Feed ↕"` micro-badge.
+[ ] File: `frontend/src/components/DiagnosisBadge.tsx` — Capped `DiagnosisBadge` and `DiagnosisStandbyPanel` height at `320px` with internal scroll so `EvidenceCard` peeks into view automatically.
+[ ] Feature: Cyberpunk Scroll Affordance — Custom slim scrollbar matching deep carbon / cyan theme.
+[ ] Feature: Visual Card Peeking — First card constrained to 320px, signaling more observability content below.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🧪 TESTING & VERIFICATION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Test 1 — Files Exist:
+Test 1 — Files Exist & Modified:
 ```powershell
-Get-Item "A:\Projects\GENLOCK SENTINEL\backend\tests\evals\test_production_readiness.py"
+Get-Item "A:\Projects\GENLOCK SENTINEL\frontend\src\index.css"
+Get-Item "A:\Projects\GENLOCK SENTINEL\frontend\src\App.tsx"
+Get-Item "A:\Projects\GENLOCK SENTINEL\frontend\src\components\DiagnosisBadge.tsx"
 ```
-✅ Expected: File exists (~23 KB, 599 lines)
-❌ If missing: Check repository status with `git status`
+✅ Expected: All three files exist with recent modification timestamps.
+❌ If missing: Restore or pull from source.
 
-Test 2 — Environment / Dependencies:
+Test 2 — TypeScript & Production Build Check:
 ```powershell
-cd "A:\Projects\GENLOCK SENTINEL\backend"
-uv run python --version
-```
-✅ Expected: Python 3.11.x
-❌ If errors: Run `uv sync` in `backend/`
-
-Test 3 — Test Suite Execution:
-```powershell
-cd "A:\Projects\GENLOCK SENTINEL\backend"
-uv run pytest tests/ -q
-```
-✅ Expected: `209 passed, 6 warnings in ~15s`
-❌ If errors: Inspect pytest error trace; verify `.env` parameters
-
-Test 4 — Functional Check (End-to-End Live System):
-```powershell
-# In terminal 1 (backend):
-cd "A:\Projects\GENLOCK SENTINEL\backend"
-uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
-
-# In terminal 2 (frontend):
 cd "A:\Projects\GENLOCK SENTINEL\frontend"
-pnpm run dev
-
-# In terminal 3 (simulator):
-cd "A:\Projects\GENLOCK SENTINEL\backend"
-uv run python scripts/simulate_drift.py --scenario complex
+pnpm build
 ```
-✅ Expected: Operations console at http://localhost:3000/ displays live telemetry spike, Gemini 3.1 Pro streaming reasoning tokens, energized Step Tracker flow, and presents the blocking HITL Approval Modal for supervisor sign-off.
-❌ If wrong: Check backend logs at port 8000 and browser DevTools console.
+✅ Expected: `tsc && vite build` exits with code 0 in ~2-3s.
+❌ If errors: Run `pnpm tsc --noEmit` to identify any type mismatches.
+
+Test 3 — Dev Server Check:
+```powershell
+cd "A:\Projects\GENLOCK SENTINEL\frontend"
+npm run dev
+```
+✅ Expected: Running at `http://localhost:3000/` with hot module replacement active.
+❌ If errors: Check port 3000 conflicts.
+
+Test 4 — Functional UI Check:
+Open `http://localhost:3000/` in browser:
+✅ Expected:
+1. Right column displays `"Scrollable Feed ↕"` glowing badge at top right.
+2. `DiagnosisBadge` standby sensor panel sits ≤ 320px height.
+3. Top header of `EvidenceCard` (Node 2 Observability) peeks into view below it.
+4. Right column scrolls smoothly with custom 6px slim cyan scrollbar.
 
 Test 5 — Security Check:
-[ ] Verify .env is in .gitignore:
-```powershell
-cd "A:\Projects\GENLOCK SENTINEL"
-git check-ignore -v backend/.env
-```
-✅ Expected: `.gitignore:3:*.env	backend/.env`
-❌ If missing: Add `*.env` and `.env` to `.gitignore` immediately
+[ ] Verify .env is in .gitignore
+    ```powershell
+    Get-Content "A:\Projects\GENLOCK SENTINEL\.gitignore" | Select-String ".env"
+    ```
+    ✅ Expected: `.env` and `*.env` appear in the output.
+    ❌ If missing: Add `.env` to `.gitignore` immediately.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 GIT COMMIT
@@ -136,11 +102,11 @@ git check-ignore -v backend/.env
 
 ```powershell
 git add .
-git commit -m "Step 21: Production Readiness Check — Passed 6 failure simulations, 5 non-negotiables, and credential audit (209/209 tests passing)"
+git commit -m "Step 21: UI Polish — Cockpit scroll affordance and card peeking"
 ```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✋ DO NOT proceed to Step [NUMBER+1] until:
+✋ DO NOT proceed to Step 22 until:
 [ ] All tests above show ✅
 [ ] Git commit is done
 [ ] You have read do_after_completion.md fully
