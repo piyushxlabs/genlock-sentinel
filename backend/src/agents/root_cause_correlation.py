@@ -103,6 +103,12 @@ async def root_cause_correlation_node(
             raw_refs={},
         )
 
+    target_node_id: str = evidence.node_id or "render-07"
+    for d_event in state.active_drift_events.values():
+        if d_event.event_id == event_id:
+            target_node_id = d_event.node_id
+            break
+
     # 3. Prompt reasoning model (Gemini 3.1 Pro at temperature=0.0)
     correlation_prompt = f"""Correlate the following telemetry evidence bundle for drift event {event_id}.
 Known Root-Cause Categories:
@@ -120,11 +126,22 @@ Evidence:
 You must produce an exact RootCauseDiagnosis JSON with event_id='{event_id}',
 one of the 4 categories, confidence (0.0 to 1.0), and a rationale citing specific evidence."""
 
+    mock_key = (
+        "diagnosis_complex"
+        if (
+            "complex" in event_id
+            or target_node_id == "render-12"
+            or not evidence.logs_available
+            or (evidence.anomaly and "conflict" in evidence.anomaly.lower())
+        )
+        else "diagnosis_simple"
+    )
+
     diagnosis: RootCauseDiagnosis = await generate_structured_output(
         role="reasoning",
         schema_cls=RootCauseDiagnosis,
         prompt=correlation_prompt,
-        mock_key="diagnosis_simple",
+        mock_key=mock_key,
     )
 
     # 4. Code-level grounding and event_id verification
@@ -148,12 +165,6 @@ one of the 4 categories, confidence (0.0 to 1.0), and a rationale citing specifi
         )
 
     # 5. Append diagnosis to state.diagnosis_history
-    target_node_id = evidence.node_id or "render-07"
-    for d_event in state.active_drift_events.values():
-        if d_event.event_id == event_id:
-            target_node_id = d_event.node_id
-            break
-
     diagnosis_record = DiagnosisRecord.from_diagnosis(
         diagnosis=diagnosis,
         node_id=target_node_id,

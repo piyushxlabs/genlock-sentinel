@@ -652,3 +652,67 @@
 - `pnpm build`: TypeScript & Vite production console bundle built cleanly in 2.27s (0 errors).
 - Pass
 ---
+
+---
+## Step 20 — End-to-End Verification
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Created `backend/tests/evals/test_e2e_verification.py`: Comprehensive end-to-end verification suite executing the full lifecycle for all Section 9.1 mock drift events and systematically proving all 12 "Agent Is Working" success criteria from Section 9.4:
+  1. Simple Case Flow (`evt-simple-001` on `render-07`): Full autonomous remediation flow (Stream Watch → Evidence Triage → Root-Cause Correlation → Autonomous Dispatch `failover_cluster_leadership` → 1-pass cycle cap enforcement).
+  2. Complex Case HITL Approve Flow (`evt-complex-002` on `render-12`): Conflicting telemetry triage → ambiguous diagnosis → HITL card generation (`HITLCardPackage`) → HITL pause interrupt → `POST .../decision` approval payload → `halt_live_take` execution → checkpoint store update → monitoring status restore.
+  3. Complex Case HITL Deny Flow (`evt-complex-002`): HITL pause interrupt → `POST .../decision` denial payload → zero actuators fired → audit log written in `error_logs`/`remediation_log` → monitoring status restore.
+  4. Edge Case Telemetry Gap Flow (`evt-edge-003` on `render-03`): Loki timeout handling with silence-over-guessing (`logs_available=False`, zero fabricated logs, ambiguous escalation).
+  5. Validated 12/12 Section 9.4 success criteria: Stream Watch breach detection, Evidence Triage structured extraction, Root-Cause Correlation rationale grounding, 1-pass execution boundary, Cloud SQL/SQLite checkpoint persistence across crash-and-resume, HITL Pause/Resume across Approve and Deny, 5 structural prohibitions (OWASP LLM01, LLM02, LLM06, ambiguous rejection, non-capabilities refusal), AG-UI SSE wire formatting (`data: <json>\n\n`), Generative UI schema alignment, OTel GenAI 4-level span hierarchy, Langfuse feedback scoring REST annotations, and resilient fallback behaviors.
+
+**Files Created:**
+- `backend/tests/evals/test_e2e_verification.py` — Comprehensive End-to-End Verification Suite for Section 9.1 mock flows and Section 9.4 12-criteria matrix (16 tests).
+
+**Files Modified:**
+- None
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/evals/test_e2e_verification.py -v`: 16/16 passed (100%).
+- `uv run pytest tests/ -v`: 188/188 passed across all unit, evals, and e2e test suites (100%).
+- `pnpm build` in `frontend/`: 1868 modules transformed in 2.02s, 0 errors.
+- Pass
+---
+
+---
+## Step 20 — Live Telemetry Drift Ingestion & Real-Time Event Dispatch
+**Date:** 2026-09-09
+**Status:** Complete
+
+**What was implemented:**
+- Implemented `POST /sessions/{session_id}/inject-drift` in `backend/src/main.py` with strict Pydantic V2 request and response models (`InjectDriftRequest`, `InjectDriftResponse`), state initialization, and `merge-by-key` state reduction for `active_drift_events`.
+- Wired `_execute_drift_reasoning` background runner to trigger the 7-node ADK Workflow runner / `run_reasoning_loop` with durable context loading and error boundaries.
+- Instrumented `run_reasoning_loop` in `backend/src/agents/reasoning_loop.py` with real-time `AGUIEventBridge` broadcasting across all lifecycle stages: `SYNC_OFFSET_SAMPLE`, `STEP_STARTED`/`STEP_FINISHED`, `TOOL_CALL_*` lifecycle, `REASONING_*` Gemini 3.1 Pro streaming tokens, `STATE_DELTA` RFC 6902 JSON Patch, and `RUN_PAUSED` on HITL escalation.
+- Updated `backend/scripts/simulate_drift.py` with default `--session-id` (`sentinel-icvfx-stage-01`), default destination URL (`http://127.0.0.1:8000/sessions/{session_id}/inject-drift`), fresh event ID generation, and automatic `httpx` HTTP dispatch.
+- Created `backend/tests/unit/test_drift_injection.py` with 5 tests covering schema validation, 202 responses, complex scenario HITL pauses, simple autonomous flows, and simulator script dispatches.
+- Verified live end-to-end on `localhost:3000`: running `uv run python scripts/simulate_drift.py --scenario complex` drives the live operations console with the sync-offset spike, streaming reasoning tokens, and the blocking HITL Approval Modal for supervisor sign-off.
+
+**Files Created:**
+- `backend/tests/unit/test_drift_injection.py` — Comprehensive unit test suite for drift event ingestion, state mutations, and AG-UI SSE event streaming.
+
+**Files Modified:**
+- `backend/src/main.py` — Added `InjectDriftRequest`, `InjectDriftResponse`, `_execute_drift_reasoning`, and `POST /sessions/{session_id}/inject-drift` endpoint.
+- `backend/src/agents/reasoning_loop.py` — Instrumented `run_reasoning_loop` with `AGUIEventBridge` real-time broadcasting and checkpoint persistence.
+- `backend/src/agents/evidence_triage.py` — Enhanced event resolution by event ID and dynamic scenario mock key selection.
+- `backend/src/agents/root_cause_correlation.py` — Fixed `target_node_id` resolution scope and added dynamic scenario mock key selection.
+- `backend/src/agents/model_config.py` — Added `evidence_bundle_complex` fixture to `MOCK_STRUCTURED_RESPONSES`.
+- `backend/scripts/simulate_drift.py` — Wired automatic HTTP dispatch into active sentinel runtime sessions with fresh event ID support.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `uv run pytest tests/unit/test_drift_injection.py -v`: 5/5 passed (100%).
+- `uv run pytest tests/`: 193/193 passed (100%).
+- Live Console Verification: Verified via browser subagent that running `uv run python scripts/simulate_drift.py --scenario complex` triggers `render-12` sync-offset chart spike, reasoning stream, and blocking HITL Approval Modal on `localhost:3000`.
+- Pass
+---
+

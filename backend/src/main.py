@@ -20,9 +20,12 @@ from google.adk.sessions import BaseSessionService, InMemorySessionService
 from google.adk.workflow import Edge, FunctionNode, START, Workflow
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.agents.reasoning_loop import run_reasoning_loop
 from src.state.checkpointing import load_checkpoint, save_checkpoint
+from src.state.reducers import reduce_state
 from src.state.schema import (
     ApprovalStatus,
+    DriftEvent,
     ErrorRecord,
     GenlockSentinelState,
     RemediationAction,
@@ -35,6 +38,7 @@ from src.ui.agui_bridge import get_event_bridge
 from src.ui.hitl_resumption import (
     DecisionRequest,
     DecisionResponse,
+    _build_node_context,
     get_hitl_coordinator,
 )
 
@@ -148,6 +152,44 @@ class FeedbackResponse(BaseModel):
 
 FeedbackRequest.model_rebuild()
 FeedbackResponse.model_rebuild()
+
+
+class InjectDriftRequest(BaseModel):
+    """Payload for synthetic or live drift event ingestion."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    event_id: str = Field(..., description="Unique drift event identifier")
+    node_id: str = Field(..., description="Target cluster render node (e.g. render-07)")
+    frame_id: str = Field(..., description="Active camera frame ID (e.g. f-88213)")
+    breach_ts: str = Field(..., description="ISO 8601 UTC timestamp of threshold breach")
+    sync_offset_us: float = Field(..., description="Sync offset in microseconds")
+    threshold_us: float = Field(default=150.0, description="Breach threshold in microseconds")
+    category_hint: Literal[
+        "network_jitter",
+        "asset_streaming_stall",
+        "thermal_throttle",
+        "ambiguous",
+    ] = Field(..., description="Target mock diagnosis category")
+    mock_loki_lines: List[str] = Field(default_factory=list, description="Associated Loki log lines")
+    mock_tempo_spans: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Associated Tempo trace spans"
+    )
+
+
+class InjectDriftResponse(BaseModel):
+    """Acknowledgement of drift event ingestion."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    status: str = Field(default="accepted", description="Drift ingestion status")
+    session_id: str = Field(..., description="Active session ID")
+    event_id: str = Field(..., description="Ingested event ID")
+    message: str = Field(..., description="Status summary")
+
+
+InjectDriftRequest.model_rebuild()
+InjectDriftResponse.model_rebuild()
 
 
 def get_streaming_mode() -> StreamingMode:
@@ -287,6 +329,101 @@ async def session_stream(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+async def _execute_drift_reasoning(
+    session_id: str,
+    event_id: str,
+) -> None:
+    """Executes the 7-node ADK Workflow runner / run_reasoning_loop for an active session."""
+    bridge = get_event_bridge()
+    try:
+        state = await load_checkpoint(session_id=session_id)
+        if state is None:
+            state = GenlockSentinelState(session_id=session_id)
+
+        ctx = await _build_node_context(session_id=session_id, state=state)
+        await run_reasoning_loop(ctx, event_id=event_id)
+    except Exception as exc:
+        await bridge.emit_run_error(
+            session_id=session_id,
+            message=f"Reasoning loop error for event '{event_id}': {exc}",
+            code="REASONING_LOOP_ERROR",
+        )
+
+
+@app.post(
+    "/sessions/{session_id}/inject-drift",
+    response_model=InjectDriftResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def inject_drift(
+    session_id: str,
+    payload: InjectDriftRequest,
+    wait: bool = False,
+) -> InjectDriftResponse:
+    """Ingests a live or simulated drift event into an active sentinel session.
+
+    Per AGENT_MASTER_PLAN.md Section 9.1, 9.4 and INTERFACE_OBSERVABILITY_SYSTEM.md:
+    1. Loads or initializes session state in checkpoint storage.
+    2. Updates state.active_drift_events using merge-by-key reducer.
+    3. Emits SYNC_OFFSET_SAMPLE for the live Prometheus sync-offset chart.
+    4. Emits STATE_DELTA for active_drift_events.
+    5. Triggers the 7-node ADK Workflow runner (run_reasoning_loop), emitting
+       STEP_STARTED, TOOL_CALL_*, REASONING_*, STATE_DELTA, and RUN_PAUSED.
+    """
+    state = await load_checkpoint(session_id=session_id)
+    if state is None:
+        state = GenlockSentinelState(session_id=session_id)
+
+    drift = DriftEvent(
+        event_id=payload.event_id,
+        node_id=payload.node_id,
+        frame_id=payload.frame_id,
+        breach_ts=payload.breach_ts,
+        sync_offset_us=payload.sync_offset_us,
+        threshold_us=payload.threshold_us,
+        status="detected",
+    )
+
+    state = reduce_state(state, {"active_drift_events": {payload.node_id: drift}})
+    await save_checkpoint(session_id=session_id, state=state)
+
+    bridge = get_event_bridge()
+    # 1. Real-time sync offset sample for live chart spike
+    await bridge.emit_sync_offset_sample(
+        session_id=session_id,
+        node_id=payload.node_id,
+        sync_offset_us=payload.sync_offset_us,
+        threshold_us=payload.threshold_us,
+        timestamp=payload.breach_ts,
+    )
+
+    # 2. State delta for active drift events
+    await bridge.broadcast_event(
+        session_id,
+        bridge.build_state_delta(
+            field_name="active_drift_events",
+            reducer_type="merge-by-key",
+            value=drift,
+            key=payload.node_id,
+        ),
+    )
+
+    # 3. Trigger 7-node ADK Workflow runner
+    if wait:
+        await _execute_drift_reasoning(session_id=session_id, event_id=payload.event_id)
+    else:
+        asyncio.create_task(
+            _execute_drift_reasoning(session_id=session_id, event_id=payload.event_id)
+        )
+
+    return InjectDriftResponse(
+        status="accepted",
+        session_id=session_id,
+        event_id=payload.event_id,
+        message=f"Drift event '{payload.event_id}' ingested. Workflow runner triggered.",
     )
 
 

@@ -133,11 +133,18 @@ async def emit_drift_event(
                 resp = await client.post(
                     destination_url,
                     json=payload.model_dump(),
-                    timeout=5.0,
+                    timeout=10.0,
                 )
-                sys.stdout.write(f"Forwarded to {destination_url} -> Status {resp.status_code}\n")
+                sys.stdout.write(
+                    f"\n[HTTP DISPATCH] Successfully forwarded to {destination_url} -> Status {resp.status_code}\n"
+                )
+                if resp.status_code >= 400:
+                    sys.stderr.write(f"[HTTP ERROR] Server responded with error: {resp.text}\n")
             except Exception as e:
-                sys.stderr.write(f"Failed to push to {destination_url}: {e}\n")
+                sys.stderr.write(
+                    f"\n[HTTP DISPATCH FAILED] Could not reach runtime at {destination_url}: {e}\n"
+                    f"(Ensure backend FastAPI server is running on port 8000: uv run uvicorn src.main:app --port 8000)\n"
+                )
 
 
 async def run_stream(interval_sec: float, count: int, destination_url: Optional[str] = None) -> None:
@@ -181,6 +188,12 @@ def main() -> None:
         help="Predefined test scenario from AGENT_MASTER_PLAN.md Section 9.1",
     )
     parser.add_argument(
+        "--session-id",
+        type=str,
+        default="sentinel-icvfx-stage-01",
+        help="Target active session ID (defaults to sentinel-icvfx-stage-01 matching console)",
+    )
+    parser.add_argument(
         "--interval",
         type=float,
         default=1.0,
@@ -196,16 +209,51 @@ def main() -> None:
         "--url",
         type=str,
         default=None,
-        help="Optional HTTP endpoint to POST drift event JSON to",
+        help="Optional HTTP endpoint override to POST drift event JSON to",
+    )
+    parser.add_argument(
+        "--no-dispatch",
+        action="store_true",
+        default=False,
+        help="Print JSON to stdout only without HTTP dispatch to runtime",
+    )
+    parser.add_argument(
+        "--static-id",
+        action="store_true",
+        default=False,
+        help="Use exact static event_id from scenario without timestamp suffix",
     )
 
     args = parser.parse_args()
 
-    if args.scenario == "stream":
-        asyncio.run(run_stream(args.interval, args.count, args.url))
+    # Resolve target URL (defaults to active local runtime session endpoint)
+    if args.no_dispatch:
+        dest_url = None
     else:
-        payload = SCENARIOS[args.scenario]
-        asyncio.run(emit_drift_event(payload, args.url))
+        dest_url = args.url or f"http://127.0.0.1:8000/sessions/{args.session_id}/inject-drift"
+
+    if args.scenario == "stream":
+        asyncio.run(run_stream(args.interval, args.count, dest_url))
+    else:
+        base_payload = SCENARIOS[args.scenario]
+        if not args.static_id:
+            suffix = int(datetime.now(timezone.utc).timestamp()) % 100000
+            fresh_event_id = f"{base_payload.event_id}-{suffix}"
+            payload = DriftTelemetryPayload(
+                event_id=fresh_event_id,
+                node_id=base_payload.node_id,
+                frame_id=base_payload.frame_id,
+                breach_ts=datetime.now(timezone.utc).isoformat(),
+                sync_offset_us=base_payload.sync_offset_us,
+                threshold_us=base_payload.threshold_us,
+                category_hint=base_payload.category_hint,
+                mock_loki_lines=base_payload.mock_loki_lines,
+                mock_tempo_spans=base_payload.mock_tempo_spans,
+            )
+        else:
+            payload = base_payload
+
+        asyncio.run(emit_drift_event(payload, dest_url))
 
 
 if __name__ == "__main__":

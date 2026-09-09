@@ -143,6 +143,13 @@ MOCK_STRUCTURED_RESPONSES: Dict[str, Dict[str, Any]] = {
         "trace_summary": "Tempo trace f-77192 indicates frame_render duration_ms=310 status=ok",
         "anomaly": "query_loki_logs timed out after 3 retries",
     },
+    "evidence_bundle_complex": {
+        "event_id": "f-91004",
+        "logs_available": True,
+        "log_summary": "15:10:01 [nvml] GPU temperature breached 94C node=render-12; 15:10:02 [cluster-manager] heartbeat delayed 180ms",
+        "trace_summary": "find_slow_requests identified render-12 nvml_throttle_wait duration_ms=420 status=throttled",
+        "anomaly": "Conflicting telemetry: GPU thermal throttling concurrent with cluster-manager network delay",
+    },
     "diagnosis_simple": {
         "event_id": "f-88213",
         "category": "network_jitter",

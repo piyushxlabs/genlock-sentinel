@@ -23,6 +23,7 @@ from src.agents.root_cause_correlation import (
     check_circuit_breaker,
     root_cause_correlation_node,
 )
+from src.state.checkpointing import save_checkpoint
 from src.state.reducers import reduce_state
 from src.state.schema import (
     ApprovalStatus,
@@ -43,6 +44,8 @@ from src.telemetry.tracing import (
     mark_span_ok,
     node_span,
 )
+from src.ui.agui_bridge import get_event_bridge
+from src.ui.hitl_resumption import get_hitl_coordinator
 from src.utils.errors import AgentError, StateValidationError, ToolExecutionError
 
 # In-flight and processed event trackers to enforce the strict 1-pass cycle cap
@@ -141,18 +144,24 @@ async def run_reasoning_loop(
             )
 
         node_id = target_drift.node_id
+        bridge = get_event_bridge()
 
         with event_span(session_id=session_id, event_id=event_id, node_id=node_id) as evt_span:
             # ------------------------------------------------------------------
             # 2. Node 2: Evidence Triage Pass
             # ------------------------------------------------------------------
+            await bridge.emit_step_started(
+                session_id=session_id,
+                step_name="evidence_triage",
+                event_id=event_id,
+            )
             with node_span(
                 node_name="evidence_triage",
                 model="gemini-3.7-flash",
                 session_id=session_id,
                 event_id=event_id,
             ):
-                triage_output = await evidence_triage_node(ctx, {"event_id": event_id})
+                triage_output = await evidence_triage_node(ctx, {"event_id": event_id, "node_id": node_id})
 
             # Screen extracted telemetry for instruction-injection attempts
             log_summary, log_anomaly = sanitize_telemetry_input(triage_output.get("log_summary"))
@@ -174,9 +183,44 @@ async def run_reasoning_loop(
                 "anomaly": "; ".join(anomalies) if anomalies else None,
             }
 
+            # Emit tool call lifecycle events for query_loki_logs & find_slow_requests
+            await bridge.emit_tool_call_lifecycle(
+                session_id=session_id,
+                tool_call_id=f"call-loki-{event_id}",
+                tool_name="query_loki_logs",
+                args={"node_id": node_id, "cluster": "stage-ndisplay"},
+                result={"logs_available": triage_bundle["logs_available"], "log_summary": log_summary or ""},
+            )
+            await bridge.emit_tool_call_lifecycle(
+                session_id=session_id,
+                tool_call_id=f"call-tempo-{event_id}",
+                tool_name="find_slow_requests",
+                args={"service_name": node_id, "min_duration_ms": 100},
+                result={"trace_summary": trace_summary or ""},
+            )
+            await bridge.emit_step_finished(
+                session_id=session_id,
+                step_name="evidence_triage",
+                event_id=event_id,
+            )
+            await bridge.broadcast_event(
+                session_id,
+                bridge.build_state_delta(
+                    field_name="evidence_bundle",
+                    reducer_type="merge-by-key",
+                    value=triage_bundle,
+                    key=event_id,
+                ),
+            )
+
             # ------------------------------------------------------------------
             # 3. Node 3: Root-Cause Correlation Pass
             # ------------------------------------------------------------------
+            await bridge.emit_step_started(
+                session_id=session_id,
+                step_name="root_cause_correlation",
+                event_id=event_id,
+            )
             with node_span(
                 node_name="root_cause_correlation",
                 model="gemini-3.1-pro",
@@ -184,6 +228,32 @@ async def run_reasoning_loop(
                 event_id=event_id,
             ):
                 diagnosis_output = await root_cause_correlation_node(ctx, {"event_id": event_id})
+
+            # Stream Gemini 3.1 Pro reasoning tokens to live console
+            rationale_str = diagnosis_output.get("rationale", "")
+            if rationale_str:
+                tokens = [w + " " for w in rationale_str.split(" ") if w]
+                await bridge.emit_reasoning_stream(
+                    session_id=session_id,
+                    message_id=f"reasoning-{event_id}",
+                    deltas=tokens,
+                )
+
+            await bridge.emit_step_finished(
+                session_id=session_id,
+                step_name="root_cause_correlation",
+                event_id=event_id,
+            )
+            curr_state_diag = get_or_init_state(ctx)
+            latest_diag = curr_state_diag.diagnosis_history[-1] if curr_state_diag.diagnosis_history else diagnosis_output
+            await bridge.broadcast_event(
+                session_id,
+                bridge.build_state_delta(
+                    field_name="diagnosis_history",
+                    reducer_type="append-only",
+                    value=latest_diag,
+                ),
+            )
 
             # Evaluate decision routing set by Node 3 (ctx.route)
             route = getattr(ctx, "route", None)
@@ -201,12 +271,45 @@ async def run_reasoning_loop(
             # ------------------------------------------------------------------
             if route == "autonomous":
                 # Step 5a: Autonomous Dispatch
+                await bridge.emit_step_started(
+                    session_id=session_id,
+                    step_name="autonomous_dispatch",
+                    event_id=event_id,
+                )
                 with node_span(
                     node_name="autonomous_dispatch",
                     session_id=session_id,
                     event_id=event_id,
                 ):
                     dispatch_output = await autonomous_dispatch_node(ctx)
+
+                action_name = dispatch_output.get("action_taken", "remediation_actuator")
+                await bridge.emit_tool_call_lifecycle(
+                    session_id=session_id,
+                    tool_call_id=f"call-actuator-{event_id}",
+                    tool_name=action_name,
+                    args={"node_id": node_id, "event_id": event_id},
+                    result=dispatch_output,
+                )
+                await bridge.emit_step_finished(
+                    session_id=session_id,
+                    step_name="autonomous_dispatch",
+                    event_id=event_id,
+                )
+
+                st_now = get_or_init_state(ctx)
+                if st_now.remediation_log:
+                    await bridge.broadcast_event(
+                        session_id,
+                        bridge.build_state_delta(
+                            field_name="remediation_log",
+                            reducer_type="append-only",
+                            value=st_now.remediation_log[-1],
+                        ),
+                    )
+                await bridge.emit_run_finished(session_id=session_id, run_id=f"run-{event_id}")
+                await save_checkpoint(session_id=session_id, state=st_now)
+
                 _PROCESSED_EVENT_IDS.add(event_id)
                 mark_span_ok(evt_span, "remediated")
                 return ReasoningLoopResult(
@@ -221,6 +324,11 @@ async def run_reasoning_loop(
                 )
             else:
                 # Step 5b: HITL Card Generation & Pause
+                await bridge.emit_step_started(
+                    session_id=session_id,
+                    step_name="hitl_card_generation",
+                    event_id=event_id,
+                )
                 with node_span(
                     node_name="hitl_card_generation",
                     model="gemini-3.7-flash",
@@ -228,6 +336,29 @@ async def run_reasoning_loop(
                     event_id=event_id,
                 ):
                     card_output = await hitl_card_generation_node(ctx)
+
+                await bridge.emit_step_finished(
+                    session_id=session_id,
+                    step_name="hitl_card_generation",
+                    event_id=event_id,
+                )
+
+                await bridge.emit_step_started(
+                    session_id=session_id,
+                    step_name="hitl_pause",
+                    event_id=event_id,
+                )
+
+                st_now = get_or_init_state(ctx)
+                coordinator = get_hitl_coordinator()
+                await coordinator.notify_paused(
+                    session_id=session_id,
+                    run_id=f"run-{event_id}",
+                    card=st_now.pending_hitl_card,
+                    reason="hitl_approval_required",
+                )
+                await save_checkpoint(session_id=session_id, state=st_now)
+
                 _PROCESSED_EVENT_IDS.add(event_id)
                 status_desc: Literal["awaiting_approval", "ambiguous_escalated"] = (
                     "ambiguous_escalated"
@@ -248,6 +379,14 @@ async def run_reasoning_loop(
 
     except Exception as exc:
         _PROCESSED_EVENT_IDS.add(event_id)
+        current_state = get_or_init_state(ctx)
+        session_id = current_state.session_id or "session-unknown"
+        bridge = get_event_bridge()
+        await bridge.emit_run_error(
+            session_id=session_id,
+            message=str(exc),
+            code="REASONING_LOOP_ERROR",
+        )
         return ReasoningLoopResult(
             event_id=event_id,
             node_id=locals().get("node_id", "unknown"),

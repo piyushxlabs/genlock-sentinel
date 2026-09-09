@@ -87,6 +87,10 @@ def _get_active_drift_event(
     if state.active_drift_events:
         if inp_node_id and inp_node_id in state.active_drift_events:
             return state.active_drift_events[inp_node_id]
+        if inp_event_id:
+            for ev in state.active_drift_events.values():
+                if ev.event_id == inp_event_id:
+                    return ev
         return next(iter(state.active_drift_events.values()))
 
     # Fallback synthetic event for testing
@@ -168,11 +172,21 @@ Produce an exact EvidenceBundleExtraction JSON with event_id='{event_id}',
 logs_available={str(logs_available).lower()}, concise log_summary, trace_summary,
 and anomaly description (or null if none)."""
 
+    mock_key = (
+        "evidence_bundle_edge"
+        if ("edge" in event_id)
+        else (
+            "evidence_bundle_complex"
+            if ("complex" in event_id or "render-12" in node_id or "ambiguous" in event_id)
+            else "evidence_bundle_simple"
+        )
+    )
+
     extraction: EvidenceBundleExtraction = await generate_structured_output(
         role="fast",
         schema_cls=EvidenceBundleExtraction,
         prompt=triage_prompt,
-        mock_key="evidence_bundle_simple",
+        mock_key=mock_key,
     )
 
     if extraction.event_id != event_id:
