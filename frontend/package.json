@@ -1,0 +1,26 @@
+{
+  "name": "genlock-sentinel-console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ag-ui/client": "^0.0.59",
+    "lucide-react": "^1.42.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "shadcn-ui": "^0.9.5",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.14"
+  }
+}

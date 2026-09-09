@@ -289,6 +289,9 @@ class AGUIEventBridge:
                     yielded_count += 1
                     if max_events is not None and yielded_count >= max_events:
                         break
+                except asyncio.CancelledError:
+                    logger.debug("SSE stream cancelled / client disconnected: session_id=%s", session_id)
+                    break
         finally:
             await self.unregister_subscriber(session_id, queue)
 

@@ -61,10 +61,15 @@ pnpm-debug.log*
 Thumbs.db
 
 
-# GCP Service Account Keys
-*.json
+# GCP Service Account Keys & Sensitive JSON
+*-key.json
+*credentials*.json
 gcp-key.json
 backend/gcp-key.json
+backend/sentinel-key.json
+*.json
+!package.json
+!tsconfig*.json
 
 
 

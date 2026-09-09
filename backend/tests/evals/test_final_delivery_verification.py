@@ -321,8 +321,15 @@ class TestMasterStep25Enhancements:
     @pytest.mark.asyncio
     async def test_simulate_drift_backend_readiness_probe(self):
         """check_backend_ready returns True when /healthz is healthy."""
-        ready = await check_backend_ready("http://localhost:8000", retries=2, backoff_sec=0.1)
-        assert ready is True
+        import httpx
+        from unittest.mock import MagicMock
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+
+        with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=mock_resp):
+            ready = await check_backend_ready("http://localhost:8000", retries=2, backoff_sec=0.1)
+            assert ready is True
 
 
 # ============================================================================

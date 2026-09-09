@@ -88,10 +88,12 @@ def bootstrap_telemetry() -> None:
     # ------------------------------------------------------------------
     # Exporter 1: Google Cloud Trace via native OTLP/gRPC
     # ------------------------------------------------------------------
-    gcp_endpoint = os.environ.get(
-        "OTEL_GCP_TRACE_OTLP_ENDPOINT",
-        "https://telemetry.googleapis.com:4317",
-    ).strip()
+    force_mock = os.environ.get("GENLOCK_SENTINEL_FORCE_MOCK", "").lower() in ("true", "1")
+    gcp_endpoint = os.environ.get("OTEL_GCP_TRACE_OTLP_ENDPOINT", "").strip()
+    if not gcp_endpoint and not force_mock:
+        gcp_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if gcp_creds and os.path.exists(gcp_creds):
+            gcp_endpoint = "https://telemetry.googleapis.com:4317"
     if gcp_endpoint:
         try:
             gcp_exporter = GrpcOTLPExporter(endpoint=gcp_endpoint, insecure=False)

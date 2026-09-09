@@ -4,6 +4,7 @@ import {
   Film,
   Flame,
   Radio,
+  RotateCcw,
 } from "lucide-react";
 import {
   AGUIStreamingClient,
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [haltingSession, setHaltingSession] = useState<boolean>(false);
+  const [resettingSession, setResettingSession] = useState<boolean>(false);
 
   // Listen for browser navigation / query param changes
   useEffect(() => {
@@ -171,6 +173,47 @@ export const App: React.FC = () => {
       console.error("Emergency stop failed:", err);
     } finally {
       setHaltingSession(false);
+    }
+  };
+
+  // Reset Session to Pristine Baseline
+  const handleResetSession = async () => {
+    if (!confirm("RESET STAGE: Restore cluster to 16 nominal locked nodes and reset stage burn?")) return;
+    setResettingSession(true);
+    try {
+      const res = await fetch(`/sessions/${sessionId}/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "Supervisor manual reset from console header.",
+          supervisor_id: "on_set_lead",
+        }),
+      });
+      if (res.ok) {
+        setState({
+          session_id: sessionId,
+          session_status: "monitoring",
+          approval_state: null,
+          active_drift_events: {},
+          evidence_bundle: {},
+          diagnosis_history: [],
+          pending_hitl_card: null,
+          remediation_log: [],
+          error_logs: [],
+        });
+        setTelemetrySamples([]);
+        setCurrentStep("stream_watch");
+        setHistorySteps(["stream_watch"]);
+        setStreamingReasoning("");
+        setActiveError(null);
+        setElapsedSeconds(0);
+        setElapsedMs(0);
+        msRef.current = Date.now();
+      }
+    } catch (err) {
+      console.error("Session reset failed:", err);
+    } finally {
+      setResettingSession(false);
     }
   };
 
@@ -361,6 +404,32 @@ export const App: React.FC = () => {
           >
             {state.session_status.toUpperCase()}
           </span>
+
+          {/* ── Stage Reset HUD Button ──────────────────────────────── */}
+          <button
+            onClick={handleResetSession}
+            disabled={resettingSession}
+            className="btn btn-secondary"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 12px",
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              fontFamily: "var(--font-mono)",
+              borderRadius: "6px",
+              background: "rgba(6, 182, 212, 0.08)",
+              border: "1px solid rgba(6, 182, 212, 0.35)",
+              color: "var(--color-cyan)",
+              cursor: resettingSession ? "not-allowed" : "pointer",
+              transition: "all 0.2s ease",
+            }}
+            title="Reset stage session to 16 nominal locked nodes and clear drift telemetry"
+          >
+            <RotateCcw size={13} className={resettingSession ? "spin-active" : ""} />
+            {resettingSession ? "RESETTING..." : "RESET STAGE"}
+          </button>
 
           {/* ── Aircraft-Grade Emergency Stop ────────────────────────── */}
           <button

@@ -20,3 +20,4 @@ def configure_test_environment(monkeypatch):
         backend_dir = Path(__file__).resolve().parent.parent
         test_db = (backend_dir / "sentinel_test_sessions.db").resolve().as_posix()
         monkeypatch.setenv("ADK_SESSION_DB_URL", f"sqlite+aiosqlite:///{test_db}")
+        monkeypatch.setenv("OTEL_GCP_TRACE_OTLP_ENDPOINT", "")
