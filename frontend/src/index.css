@@ -86,7 +86,9 @@ body {
 }
 
 /* ── Mono type ──────────────────────────────────────────────────────── */
-code, pre, .mono {
+code,
+pre,
+.mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -125,17 +127,19 @@ code, pre, .mono {
 /* ── Layout ──────────────────────────────────────────────────────────── */
 
 /*
- * Viewport-locked cockpit shell — no vertical page scroll.
- * The entire console fits within 100dvh (dynamic viewport height).
+ * Whole-page scroll shell — content flows naturally.
+ * Browser handles vertical scroll at the page level.
  */
 .console-container {
   display: flex;
   flex-direction: column;
-  height: 100dvh;          /* lock to viewport height              */
+  min-height: 100dvh;
+  /* grow to at least full viewport height  */
   max-width: 1920px;
   margin: 0 auto;
-  padding: 10px 16px 8px;  /* tight padding for full 1080p fit     */
-  overflow: hidden;         /* prevent page-level scroll            */
+  padding: 16px 20px 24px;
+  /* extra bottom breathing room           */
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 
@@ -143,109 +147,89 @@ code, pre, .mono {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, rgba(11,17,32,0.96) 0%, rgba(14,22,40,0.96) 100%);
+  padding: 12px 20px;
+  background: linear-gradient(135deg, rgba(11, 17, 32, 0.96) 0%, rgba(14, 22, 40, 0.96) 100%);
   border: 1px solid var(--border-card);
-  border-top: 2px solid rgba(6,182,212,0.40);
-  border-radius: 12px;
-  margin-bottom: 8px;
+  border-top: 2px solid rgba(6, 182, 212, 0.40);
+  border-radius: 14px;
+  margin-bottom: 14px;
   backdrop-filter: blur(20px);
   box-shadow:
-    0 4px 24px rgba(0,0,0,0.45),
-    0 0 0 1px rgba(6,182,212,0.06);
-  flex-shrink: 0;            /* header never shrinks                */
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(6, 182, 212, 0.06);
+  flex-shrink: 0;
+  /* header never shrinks                */
 }
 
 /* Step tracker wrapper — fixed height, never shrinks */
 .step-tracker-wrapper {
   flex-shrink: 0;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 
 /*
- * Studio Rack 3-Tier Layout:
- * 1. Top Strip: Header + StepTracker
- * 2. Middle Strip: Full Cinematic-Width Telemetry & LED Matrix
- * 3. Bottom Rack: 3 Equal Columns (Root Cause, Evidence, Remediation)
+ * Cockpit 12-column main grid.
+ * Single column on smaller screens; 7/5 split above 1280px.
  */
-.studio-chart-strip {
-  flex: 0 0 285px;
-  min-height: 220px;
-  max-height: 320px;
-  margin-bottom: 8px;
-  display: flex;
-  flex-direction: column;
-}
-
-.studio-chart-strip > * {
-  height: 100%;
-  min-height: 0;
-}
-
-.studio-bottom-rack {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-@media (min-width: 1024px) {
-  .studio-bottom-rack {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.rack-col {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.rack-col > * {
-  min-height: 100%;
-}
-
-/* Cockpit 12-column legacy support */
 .cockpit-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  flex: 1 1 0;
-  min-height: 0;
+  /* mobile: stack          */
+  gap: 24px;
+  margin-top: 4px;
 }
 
 @media (min-width: 1280px) {
   .cockpit-grid {
     grid-template-columns: 7fr 5fr;
+    gap: 24px;
+    align-items: start;
+    /* columns flow at their own natural height */
+  }
+
+  /* Sticky Left Column: pinned on screen while user scrolls down right column */
+  .cockpit-col-left {
+    position: sticky;
+    top: 16px;
+    align-self: flex-start;
   }
 }
 
+/* Left column — chart card */
 .cockpit-col-left {
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
 }
 
-.cockpit-col-left > * {
-  flex: 1 1 0;
-  min-height: 0;
-}
-
+/* Right column — stacked panels, full natural height */
 .cockpit-col-right {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;
-  max-height: 680px;
-  padding-right: 8px;
+  gap: 24px;
+}
+
+/* ── Layout & Responsive Utility Helpers ────────────────────────────── */
+.sticky { position: sticky; }
+.top-4 { top: 1rem; }
+.self-start { align-self: flex-start; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.justify-between { justify-content: space-between; }
+.h-\[280px\] { height: 280px; }
+.min-h-\[640px\] { min-height: 640px; }
+.w-full { width: 100%; }
+.relative { position: relative; }
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid-cols-8 { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.gap-2\.5 { gap: 0.625rem; }
+.gap-6 { gap: 1.5rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+
+@media (min-width: 1280px) {
+  .xl\:col-span-7 { grid-column: span 7 / span 12; }
+  .xl\:col-span-5 { grid-column: span 5 / span 12; }
+  .xl\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
 
 .shrink-0 {
@@ -256,15 +240,18 @@ code, pre, .mono {
 .cockpit-scroll::-webkit-scrollbar {
   width: 6px;
 }
+
 .cockpit-scroll::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.6);
   border-radius: 4px;
 }
+
 .cockpit-scroll::-webkit-scrollbar-thumb {
   background: rgba(6, 182, 212, 0.4);
   border-radius: 4px;
   border: 1px solid rgba(6, 182, 212, 0.6);
 }
+
 .cockpit-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(6, 182, 212, 0.8);
 }
@@ -345,73 +332,163 @@ code, pre, .mono {
 
 /* Classic pulse */
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.35; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
 }
-.pulse-active { animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+.pulse-active {
+  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
 
 /* Halo ring pulse for active ADK nodes */
 @keyframes halo-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(6,182,212,0.4), 0 0 20px rgba(6,182,212,0.25); }
-  50%       { box-shadow: 0 0 0 6px rgba(6,182,212,0), 0 0 30px rgba(6,182,212,0.40); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4), 0 0 20px rgba(6, 182, 212, 0.25);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(6, 182, 212, 0), 0 0 30px rgba(6, 182, 212, 0.40);
+  }
 }
-.halo-pulse { animation: halo-pulse 2s ease-in-out infinite; }
+
+.halo-pulse {
+  animation: halo-pulse 2s ease-in-out infinite;
+}
 
 /* Emerald halo for completed nodes */
 @keyframes halo-pulse-emerald {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.3), 0 0 12px rgba(16,185,129,0.20); }
-  50%       { box-shadow: 0 0 0 4px rgba(16,185,129,0), 0 0 20px rgba(16,185,129,0.30); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3), 0 0 12px rgba(16, 185, 129, 0.20);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0), 0 0 20px rgba(16, 185, 129, 0.30);
+  }
 }
-.halo-pulse-emerald { animation: halo-pulse-emerald 3s ease-in-out infinite; }
+
+.halo-pulse-emerald {
+  animation: halo-pulse-emerald 3s ease-in-out infinite;
+}
 
 /* LED ping for cluster nodes */
 @keyframes led-ping {
-  0%   { opacity: 1; transform: scale(1); }
-  70%  { opacity: 0; transform: scale(2.5); }
-  100% { opacity: 0; transform: scale(2.5); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  70% {
+    opacity: 0;
+    transform: scale(2.5);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.5);
+  }
 }
+
 .led-ping-ring {
-  animation: led-ping 2.5s cubic-bezier(0,0,0.2,1) infinite;
+  animation: led-ping 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
 /* Flow energy along connector lines */
 @keyframes flow-dash {
-  from { stroke-dashoffset: 40; }
-  to   { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: 40;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
 }
-.flow-line { animation: flow-dash 0.8s linear infinite; }
+
+.flow-line {
+  animation: flow-dash 0.8s linear infinite;
+}
 
 /* Radar sweep */
 @keyframes radar-sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Burn ticker micro-pulse */
 @keyframes burn-micro {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
-.burn-ticker { animation: burn-micro 1s steps(1) infinite; }
+
+.burn-ticker {
+  animation: burn-micro 1s steps(1) infinite;
+}
 
 /* Scan line */
 @keyframes scan-x {
-  from { transform: translateX(0); }
-  to   { transform: translateX(100%); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
 }
 
 /* Modal enter */
 @keyframes modal-enter {
-  from { opacity: 0; transform: scale(0.95) translateY(12px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* Standby blink */
 @keyframes standby-blink {
-  0%, 90%, 100% { opacity: 1; }
-  95%           { opacity: 0.2; }
+
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+
+  95% {
+    opacity: 0.2;
+  }
 }
-.standby-blink { animation: standby-blink 3s ease-in-out infinite; }
+
+.standby-blink {
+  animation: standby-blink 3s ease-in-out infinite;
+}
 
 /* ── Confidence Meter ────────────────────────────────────────────────── */
 .meter-track {
@@ -426,7 +503,7 @@ code, pre, .mono {
 .meter-fill {
   height: 100%;
   border-radius: 9999px;
-  transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 8px currentColor;
 }
 
@@ -447,17 +524,15 @@ code, pre, .mono {
 .modal-dialog {
   background: linear-gradient(160deg, #0c1524 0%, #0b1220 100%);
   border: 2px solid rgba(245, 158, 11, 0.45);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow:
     0 0 50px rgba(245, 158, 11, 0.15),
-    0 24px 60px rgba(0,0,0,0.7),
-    inset 0 1px 0 rgba(255,220,100,0.08);
+    0 24px 60px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 220, 100, 0.08);
   width: 100%;
-  max-width: 680px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  max-width: 840px;
+  max-height: 90vh;
+  overflow-y: auto;
   animation: modal-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -487,15 +562,17 @@ code, pre, .mono {
   background: var(--color-cyan);
   color: #030712;
 }
+
 .btn-primary:hover:not(:disabled) {
   background: #22d3ee;
-  box-shadow: 0 0 20px rgba(6,182,212,0.45);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.45);
 }
 
 .btn-approve {
   background: var(--color-emerald);
   color: #030712;
 }
+
 .btn-approve:hover:not(:disabled) {
   background: #34d399;
   box-shadow: 0 0 22px var(--color-emerald-glow);
@@ -506,10 +583,11 @@ code, pre, .mono {
   color: var(--color-rose);
   border: 1px solid rgba(244, 63, 94, 0.32);
 }
+
 .btn-deny:hover:not(:disabled) {
   background: rgba(244, 63, 94, 0.22);
   border-color: var(--color-rose);
-  box-shadow: 0 0 16px rgba(244,63,94,0.2);
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.2);
 }
 
 /* Aircraft-grade emergency stop */
@@ -526,42 +604,53 @@ code, pre, .mono {
   position: relative;
   overflow: hidden;
 }
+
 .btn-emergency-stop::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(239, 68, 68, 0.04) 0px,
-    rgba(239, 68, 68, 0.04) 4px,
-    transparent 4px,
-    transparent 8px
-  );
+  background: repeating-linear-gradient(45deg,
+      rgba(239, 68, 68, 0.04) 0px,
+      rgba(239, 68, 68, 0.04) 4px,
+      transparent 4px,
+      transparent 8px);
 }
+
 .btn-emergency-stop:hover:not(:disabled) {
   background: rgba(185, 28, 28, 0.50);
   border-color: rgba(239, 68, 68, 0.80);
   color: #ffffff;
   box-shadow:
     0 0 25px rgba(239, 68, 68, 0.40),
-    inset 0 0 10px rgba(239,68,68,0.10);
+    inset 0 0 10px rgba(239, 68, 68, 0.10);
 }
+
 .btn-emergency-stop:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
 /* ── Scrollbars ──────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.10);
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.20); }
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.20);
+}
 
 /* ── Utility text highlight ──────────────────────────────────────────── */
 ::selection {
-  background: rgba(6,182,212,0.30);
+  background: rgba(6, 182, 212, 0.30);
   color: #f0f4ff;
 }

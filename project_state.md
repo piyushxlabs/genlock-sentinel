@@ -1,6 +1,6 @@
 # PROJECT STATE
 
-- **Last Completed Step:** Step 21: Production Readiness Check
+- **Last Completed Step:** Step 23: Telemetry SVG Restoration, 16-Node Matrix & Sticky Cockpit Layout
 - **Implemented Features:**
   - Initialized Git repository with security rules
   - Air-gapped environment configuration via `.gitignore`
@@ -49,7 +49,7 @@
   - Typed AG-UI SSE streaming client in `frontend/src/stream/agui-client.ts` with auto-reconnect and RFC 6902 state delta patching for all declared reducers
   - All 7 Generative UI components implemented per Section 4a: `SyncOffsetChart.tsx`, `StepTracker.tsx`, `EvidenceCard.tsx`, `DiagnosisBadge.tsx`, `ApprovalCardModal.tsx`, `RemediationLog.tsx`, and `FailureBanner.tsx`
   - Main operations console dashboard in `frontend/src/App.tsx` with live stage burn counter ($1,800/min), emergency stop button, split view layout, and modal approval overlay
-  - Production bundle verified via `pnpm build` (`tsc && vite build`: 1868 modules transformed in 2.19s, zero errors)
+  - Production bundle verified via `pnpm build` (`tsc && vite build`: 1868 modules transformed in 2.28s, zero errors)
   - OTel GenAI 4-level span hierarchy: session → event → node → tool with `gen_ai.*` semantic convention attributes
   - Dual-export OTLP TracerProvider: gRPC to Cloud Trace + HTTP/Basic Auth to Langfuse; graceful degradation to BatchSpanProcessor-only when credentials absent
   - Feedback annotation client (`FeedbackAnnotationClient`) writing `diagnosis_accuracy` and `hitl_decision` Langfuse REST Scores for Section 7a evaluation pipeline
@@ -65,7 +65,7 @@
   - Synthetic drift simulator `backend/scripts/simulate_drift.py` auto-dispatching via `httpx` to active console sessions with fresh event ID generation
   - Full real-time `AGUIEventBridge` instrumented execution in `run_reasoning_loop` streaming `SYNC_OFFSET_SAMPLE`, `STEP_STARTED`/`STEP_FINISHED`, `TOOL_CALL_*`, `REASONING_*` Gemini tokens, RFC 6902 `STATE_DELTA`, and `RUN_PAUSED` directly to frontend console
   - Authoritative Production Readiness & Final Audit Evaluation Suite in `backend/tests/evals/test_production_readiness.py` (14 tests covering all 6 Section 9.5 failure simulations, all 5 Section 9.6 non-negotiable verification requirements, and all 3 Section 2 production configuration and credential leak audits)
-  - Hollywood ICVFX Cockpit layout, scroll affordance (`.cockpit-scroll`, `max-height: 680px`, glowing `Scrollable Feed ↕` micro-badge), and `shrink-0` flex-shrink protection on all right-column cards
-- **Pending Next Step:** None — All 21 Steps Complete & System Production-Ready!
+  - Telemetry SVG container restored with explicit 280px height, permanent 16-node LED matrix (R01-R16) with organic emerald/red pulse pings and active drift badges, rose glow threshold breach curves, and sticky left-column cockpit pinning (`xl:col-span-7 sticky top-4 self-start`) eliminating voids during page scroll
+- **Pending Next Step:** None — Operations Console & ADK Workflow Fully Operational!
 - **Known Issues / Blockers:** None
 

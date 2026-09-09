@@ -145,17 +145,17 @@ export const App: React.FC = () => {
     state.pending_hitl_card || state.session_status === "awaiting_approval"
       ? "hitl"
       : latestDiagnosis
-      ? "autonomous"
-      : null;
+        ? "autonomous"
+        : null;
 
   // Stage burn cost — high precision
-  const stageBurnUsd    = (elapsedMs / 60000) * STAGE_BURN_RATE_PER_MIN;
-  const burnDollars     = Math.floor(stageBurnUsd);
-  const burnCents       = Math.floor((stageBurnUsd - burnDollars) * 100);
-  const burnMillis      = Math.floor(((stageBurnUsd - burnDollars) * 100 - burnCents) * 100);
+  const stageBurnUsd = (elapsedMs / 60000) * STAGE_BURN_RATE_PER_MIN;
+  const burnDollars = Math.floor(stageBurnUsd);
+  const burnCents = Math.floor((stageBurnUsd - burnDollars) * 100);
+  const burnMillis = Math.floor(((stageBurnUsd - burnDollars) * 100 - burnCents) * 100);
 
   // Session clock format
-  const hrs  = Math.floor(elapsedSeconds / 3600);
+  const hrs = Math.floor(elapsedSeconds / 3600);
   const mins = Math.floor((elapsedSeconds % 3600) / 60);
   const secs = elapsedSeconds % 60;
   const clockStr = [hrs, mins, secs].map((v) => String(v).padStart(2, "0")).join(":");
@@ -312,13 +312,12 @@ export const App: React.FC = () => {
 
           {/* Session status chip */}
           <span
-            className={`badge ${
-              state.session_status === "stopped"
+            className={`badge ${state.session_status === "stopped"
                 ? "badge-critical"
                 : state.session_status === "awaiting_approval"
-                ? "badge-warning pulse-active"
-                : "badge-nominal"
-            }`}
+                  ? "badge-warning pulse-active"
+                  : "badge-nominal"
+              }`}
           >
             {state.session_status.toUpperCase()}
           </span>
@@ -348,25 +347,20 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* ── Middle Strip: Full Cinematic-Width Telemetry & LED Matrix ── */}
-      <div className="studio-chart-strip">
-        <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
-      </div>
+      {/* ── Main 12-Column Cockpit Grid ─────────────────────────────────
+           Left  (xl: 7/12): SyncOffsetChart + LED matrix
+           Right (xl: 5/12): Diagnosis · Evidence · Remediation
+      ──────────────────────────────────────────────────────────────── */}
+      <div className="cockpit-grid grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {/* Left column — telemetry */}
+        <div className="cockpit-col-left xl:col-span-7 sticky top-4 self-start">
+          <SyncOffsetChart samples={telemetrySamples} thresholdUs={150.0} />
+        </div>
 
-      {/* ── Bottom Rack: 3-Column Equal Grid ─────────────────────────── */}
-      <div className="studio-bottom-rack">
-        {/* Column 1: Gemini 3.1 Pro Root-Cause Correlation */}
-        <div className="rack-col cockpit-scroll">
+        {/* Right column — diagnosis, evidence, remediation */}
+        <div className="cockpit-col-right xl:col-span-5 flex flex-col gap-6">
           <DiagnosisBadge diagnosis={latestDiagnosis} streamingReasoning={streamingReasoning} />
-        </div>
-
-        {/* Column 2: Triaged Observability Evidence (Loki / Tempo) */}
-        <div className="rack-col cockpit-scroll">
           <EvidenceCard evidence={activeEvidence} eventId={activeEventId} />
-        </div>
-
-        {/* Column 3: Actuator Remediation Timeline */}
-        <div className="rack-col cockpit-scroll">
           <RemediationLog logs={state.remediation_log} />
         </div>
       </div>

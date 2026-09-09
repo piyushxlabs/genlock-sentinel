@@ -819,3 +819,62 @@
 - `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed in 2.56s.
 - Pass
 ---
+
+---
+## Step 22 — Whole-Page Vertical Scroll Layout Refactor
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Converted `.console-container` in `frontend/src/index.css` from a viewport-locked `height: 100dvh; overflow: hidden` shell to `min-height: 100dvh; overflow-x: hidden`, enabling natural browser-level vertical page scrolling.
+- Removed `max-height: 680px`, `overflow-y: auto`, and `.cockpit-scroll` from `.cockpit-col-right` so all right-column cards (`DiagnosisBadge`, `EvidenceCard`, `RemediationLog`) render at their full natural height.
+- Updated `.cockpit-col-left` to remove `min-height: 0` and `overflow: hidden` flex-fill constraints; chart now renders at its designed natural height.
+- Added `align-items: start` to the `@media (min-width: 1280px)` `.cockpit-grid` rule so left and right columns are sized independently by their content rather than stretching to match the taller sibling.
+- Removed the `flex: 1 1 0` and `min-height: 0` from `.cockpit-grid` that were forcing it to fill the parent flex container — no longer needed with page-scroll architecture.
+- Deleted the "Scrollable Feed ↕" micro-badge JSX and `cockpit-scroll` class reference from `frontend/src/App.tsx`.
+
+**Files Created:**
+- None
+
+**Files Modified:**
+- `frontend/src/index.css` — Whole-page scroll layout tokens for `.console-container`, `.cockpit-grid`, `.cockpit-col-left`, `.cockpit-col-right`.
+- `frontend/src/App.tsx` — Removed nested scroll artefacts (class + badge).
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed in 2.47s.
+- Pass
+---
+
+---
+## Step 23 — Telemetry SVG Restoration, 16-Node Matrix & Sticky Cockpit Layout
+**Date:** September 9, 2026
+**Status:** Complete
+
+**What was implemented:**
+- Fixed collapsed chart SVG in `frontend/src/components/SyncOffsetChart.tsx` by setting an explicit container height of `h-[280px] w-full relative` (`height: 280px`), ensuring the 150µs breach threshold line, neon area glow, red sync curves, and live radar sweep line are 100% visible.
+- Added `roseGlow` SVG linear gradient and red curve styling (`var(--color-rose)`) for nodes breaching the 150µs threshold, enabling single-sample and multi-sample rendering.
+- Restored the 16 cluster nodes (R01 through R16) inside a dedicated `grid grid-cols-8 gap-2.5 py-3` layout so they are permanently rendered with organic emerald/red pulse pings and breach-reactive status.
+- Added active drift telemetry badge strip directly underneath the 16-node matrix (e.g. `render-12 [210.0 µs]`) without replacing the matrix.
+- Pinned the left-hand telemetry column in `frontend/src/App.tsx` and `frontend/src/index.css` using `xl:col-span-7 sticky top-4 self-start` (`position: sticky; top: 16px; align-self: flex-start`), giving `SyncOffsetChart` `min-h-[640px] flex flex-col justify-between` to eliminate the empty left void while scrolling.
+- Configured right column in `App.tsx` with `xl:col-span-5 flex flex-col gap-6` for full-height rendering of `DiagnosisBadge`, `EvidenceCard`, and `RemediationLog`.
+
+**Files Created:**
+- None
+
+**Files Modified:**
+- `frontend/src/components/SyncOffsetChart.tsx` — Fixed SVG height (280px), permanent 16-node matrix, rose glow gradient, drift badges.
+- `frontend/src/App.tsx` — Sticky left panel (`xl:col-span-7 sticky top-4 self-start`) and right column gap (`xl:col-span-5 flex flex-col gap-6`).
+- `frontend/src/index.css` — Sticky column positioning, responsive grid rules, and utility classes.
+
+**Packages Installed:**
+- None
+
+**Verification Result:**
+- `pnpm build` (frontend): ✅ Zero TypeScript errors — `tsc && vite build` — 1868 modules transformed in 2.28s.
+- `uv run pytest tests/unit -q` (backend): ✅ 148 passed in 12.63s.
+- Pass
+---
+

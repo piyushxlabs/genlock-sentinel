@@ -193,3 +193,14 @@ Step 4 — No deviations from spec.
 **Reason:** In CSS flex column containers with constrained height, child items default to `flex-shrink: 1`, which compressed `DiagnosisBadge` into an unreadable squashed strip. Adding `flex-shrink: 0` ensures each card preserves its full designed dimensions and layout integrity while allowing the parent `.cockpit-scroll` container to scroll smoothly.
 **Impact:** Completely resolves card squashing bugs, provides natural card heights, and ensures the top edge of `EvidenceCard` peeks cleanly beneath `DiagnosisBadge` in the scrollable right column.
 ---
+
+---
+## Step 23 — Explicit Telemetry SVG Viewport & Sticky Mission Control Pinning
+**Decision:** 
+1. Replaced the relative collapsing `flex: 1 1 0` SVG container in `SyncOffsetChart.tsx` with an explicit `height: 280px; width: 100%` viewport container, added `roseGlow` gradient for threshold breaches, and added fallback point duplication so single-sample drift events render immediate lines and endpoint dots.
+2. Permanently integrated the 16-node cluster matrix (R01–R16) directly inside the main component body in an 8-column grid with dynamic pulse pings and status indicators, displaying incoming drift badges alongside/underneath the matrix rather than replacing it.
+3. Configured `SyncOffsetChart` with `min-height: 640px` and applied `position: sticky; top: 16px; align-self: flex-start` to `.cockpit-col-left` (via `xl:col-span-7 sticky top-4 self-start`).
+**Reason:** In natural whole-page scrolling, unconstrained SVG containers nested in flex parents collapse to 0px height if their parent does not define a fixed pixel boundary. When scrolling long diagnosis traces and Loki/Tempo logs in the right column, an unstuck left column left a massive black void. Pinning the chart ensures continuous real-time observability of frame-sync health while evaluating diagnostic evidence.
+**Impact:** Eliminates layout collapse, guarantees 100% visibility of the 150µs breach perimeter, radar sweep, and 16-node matrix, and delivers an immersive, broadcast-grade mission control experience.
+---
+
