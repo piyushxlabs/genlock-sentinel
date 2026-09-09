@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 <img src="./assets/banner.png" alt="Genlock Sentinel — Autonomous Genlock & Frame-Sync SRE Agent for In-Camera VFX nDisplay Clusters" width="100%" style="border-radius: 12px;" />
 
@@ -138,67 +138,77 @@ The orchestration engine strictly implements the 7-node ADK Workflow Runtime gra
 
 ```mermaid
 flowchart TD
-    subgraph STAGE["🎥 Live ICVFX Stage ($1,800/min Burn)"]
-        CAM["📷 Virtual Production Camera (PTP IEEE 1588 Genlock)"]
-        CLUSTER["🖥️ 16-Node Unreal Engine nDisplay Cluster (R01 - R16)"]
+    subgraph STAGE["🎥 Live ICVFX Stage — $1,800/min Burn"]
+        direction LR
+        CAM["📷 Virtual Production Camera\nPTP IEEE 1588 Genlock"]
+        CLUSTER["🖥️ 16-Node Unreal Engine\nnDisplay Cluster R01-R16"]
         CAM -->|"Genlock Pulse"| CLUSTER
     end
 
-    subgraph GRAFANA["📊 Observability Plane (Grafana Cloud MCP)"]
-        PROM["Prometheus: sync_offset_us (> 150µs breach)"]
-        LOKI["Loki: LogDisplayClusterEngine & PTP Sync Jitter"]
-        TEMPO["Tempo: Distributed Traces & Frame Render Barriers"]
-        CLUSTER -->|"Vsync Metrics"| PROM
-        CLUSTER -->|"Node Logs"| LOKI
-        CLUSTER -->|"Trace Spans"| TEMPO
+    subgraph GRAFANA["📊 Observability Plane — Grafana Cloud MCP"]
+        direction LR
+        PROM["Prometheus\nsync_offset_us > 150µs"]
+        LOKI["Loki\nLogDisplayClusterEngine"]
+        TEMPO["Tempo\nDistributed Traces"]
     end
 
-    subgraph SECURITY["🛡️ Zero-Trust Boundary (Google Model Armor)"]
-        ARMOR["Model Armor Sanitizer<br/>(OWASP LLM01 Injection & LLM02 Credential Scrubbing)"]
-        GUARDS["State Invariant & Prohibition Guards"]
+    subgraph SECURITY["🛡️ Zero-Trust — Google Model Armor"]
+        direction LR
+        ARMOR["Model Armor Sanitizer\nOWASP LLM01 + LLM02"]
+        GUARDS["State Invariant\nProhibition Guards"]
+        ARMOR --- GUARDS
     end
 
-    subgraph ADK["🤖 Google ADK 2.8.0 Workflow Runtime (7-Node Graph)"]
-        N1["Node 1: Stream Watch<br/>(Non-LLM Ingestion)"]
-        N2["Node 2: Evidence Triage<br/>(Gemini 3.7 Flash + MCP Tools)"]
-        N3["Node 3: Root-Cause Correlation<br/>(Gemini 3.1 Pro @ temp=0.0)"]
-        
-        DECISION{"Decision Edge<br/>Category == ambiguous OR<br/>Confidence < 0.75 OR<br/>High-Impact Action?"}
-
-        N4["Node 4: Autonomous Dispatch<br/>(Deterministic Reversible Tools 4-6)"]
-        N5["Node 5: HITL Card Generation<br/>(Gemini 3.7 Flash Structured Package)"]
-        N6["Node 6: HITL Pause<br/>(ADK LongRunningFunctionTool Interrupt)"]
-        N7["Node 7: Post-Approval Handling<br/>(Deterministic High-Stakes Tools 7-9)"]
-
+    subgraph ADK["🤖 Google ADK 2.8.0 Workflow Runtime — 7-Node Graph"]
+        direction TB
+        N1["Node 1: Stream Watch\nNon-LLM Ingestion"]
+        N2["Node 2: Evidence Triage\nGemini 3.7 Flash + MCP Tools"]
+        N3["Node 3: Root-Cause Correlation\nGemini 3.1 Pro @ temp=0.0"]
+        DECISION{"Decision Edge\nambiguous OR conf < 0.75\nOR High-Impact Action?"}
+        N4["Node 4: Autonomous Dispatch\nDeterministic Reversible Tools 4-6"]
+        N5["Node 5: HITL Card Generation\nGemini 3.7 Flash Structured Package"]
+        N6["Node 6: HITL Pause\nADK LongRunningFunctionTool"]
+        N7["Node 7: Post-Approval Handling\nDeterministic High-Stakes Tools 7-9"]
         N1 -->|"active_drift_event"| N2
         N2 -->|"evidence_bundle"| N3
         N3 --> DECISION
-        DECISION -->|"Autonomous Path (conf >= 0.75)"| N4
+        DECISION -->|"Autonomous Path conf >= 0.75"| N4
         DECISION -->|"HITL Escalation Path"| N5
         N5 -->|"pending_hitl_card"| N6
-        N6 -.->|"Supervisor Approve via REST"| N7
+        N6 -.->|"Supervisor Approved"| N7
     end
 
     subgraph STORAGE["💾 Enterprise Checkpointing"]
-        DB[("Google Cloud SQL (PostgreSQL)<br/>asyncpg Session Adapter<br/>10-Field State & Pure Reducers")]
+        DB[("Google Cloud SQL PostgreSQL\nasyncpg Session Adapter\n10-Field State and Pure Reducers")]
     end
 
-    subgraph COCKPIT["💻 Hollywood Carbon Cockpit Console (React 18 + Vite)"]
-        UI_RADAR["16-Node LED Matrix (R01-R16)"]
-        UI_CHART["Sync-Offset Drift Area Chart (150µs Perimeter)"]
-        UI_MODAL["Non-Dismissible HITL Sign-off Modal"]
-        UI_BURN["Live Nuclear Stage Burn Ticker ($1,800/min)"]
+    subgraph COCKPIT["💻 Hollywood Carbon Cockpit — React 18 + Vite"]
+        direction LR
+        UI_RADAR["16-Node LED Matrix\nR01-R16"]
+        UI_CHART["Sync-Offset Area Chart\n150µs Perimeter"]
+        UI_MODAL["Non-Dismissible\nHITL Approval Modal"]
+        UI_BURN["Stage Burn Ticker\n$1,800/min"]
     end
 
-    PROM --> N1
-    LOKI --> ARMOR
-    TEMPO --> ARMOR
-    ARMOR --> N2
-    N4 -->|"Reversible Actuation"| CLUSTER
-    N7 -->|"Halt Live Take / Greenscreen"| CLUSTER
-    ADK <--> DB
-    ADK -->|"AG-UI SSE (RFC 6902 JSON Patch)"| COCKPIT
-    COCKPIT -->|"POST /sessions/.../decision"| N6
+    subgraph ACTUATION["⚡ Cluster Actuation Outcomes"]
+        direction LR
+        ACT_AUTO["Reversible Actuation\nfailover / resync / deprioritize"]
+        ACT_HITL["Halt Live Take\nor Greenscreen Fallback"]
+    end
+
+    CLUSTER -->|"Vsync Metrics"| PROM
+    CLUSTER -->|"Node Logs"| LOKI
+    CLUSTER -->|"Trace Spans"| TEMPO
+    PROM -->|"breach detected"| N1
+    LOKI -->|"raw logs"| ARMOR
+    TEMPO -->|"raw traces"| ARMOR
+    ARMOR -->|"sanitized telemetry"| N2
+    ADK -->|"checkpoint write"| DB
+    DB -->|"session restore"| ADK
+    ADK -->|"AG-UI SSE RFC 6902 JSON Patch"| COCKPIT
+    COCKPIT -->|"POST decision Approve / Deny"| N6
+    N4 -->|"auto-remediation"| ACT_AUTO
+    N7 -->|"approved action"| ACT_HITL
 
     style STAGE fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
     style GRAFANA fill:#1e1b4b,stroke:#f97316,stroke-width:2px,color:#f8fafc
@@ -206,10 +216,17 @@ flowchart TD
     style ADK fill:#022c22,stroke:#10b981,stroke-width:2px,color:#d1fae5
     style STORAGE fill:#1e293b,stroke:#818cf8,stroke-width:2px,color:#f8fafc
     style COCKPIT fill:#09090b,stroke:#06b6d4,stroke-width:2px,color:#f8fafc
+    style ACTUATION fill:#1c1917,stroke:#a16207,stroke-width:2px,color:#fef9c3
     style DECISION fill:#3b0764,stroke:#c084fc,stroke-width:2px,color:#f3e8ff
-    style N6 fill:#431407,stroke:#f97316,stroke-width:3px,color:#fed7aa
+    style N1 fill:#0c4a6e,stroke:#38bdf8,stroke-width:1px,color:#f0f9ff
+    style N2 fill:#0c4a6e,stroke:#38bdf8,stroke-width:1px,color:#f0f9ff
+    style N3 fill:#0c4a6e,stroke:#38bdf8,stroke-width:1px,color:#f0f9ff
     style N4 fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ecfdf5
+    style N5 fill:#0c4a6e,stroke:#38bdf8,stroke-width:1px,color:#f0f9ff
+    style N6 fill:#431407,stroke:#f97316,stroke-width:3px,color:#fed7aa
     style N7 fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fef2f2
+    style ACT_AUTO fill:#064e3b,stroke:#34d399,stroke-width:1px,color:#ecfdf5
+    style ACT_HITL fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fef2f2
 ```
 
 ---
